@@ -1,25 +1,26 @@
 <p align="center">
-  <a href="https://flutter.dev" target="blank"><img src="https://storage.googleapis.com/cms-storage-bucket/0dbfcc7a59d1d54a2060.png" width="150" alt="Flutter Logo" /></a>
+  <a href="https://flutter.dev" target="blank">
+    <img src="https://www.vectorlogo.zone/logos/flutterio/flutterio-ar21.svg" width="250" alt="Flutter Logo" />
+  </a>
 </p>
 
 <p align="center"><b>Sercom Frontend:</b> Interfaz móvil multiplataforma para la gestión de servicios técnicos.</p>
 
 <p align="center">
-<a href="https://flutter.dev" target="_blank"><img src="https://img.shields.io/badge/Platform-Flutter-02569B?style=flat&logo=flutter" alt="Flutter" /></a>
-<a href="https://dart.dev" target="_blank"><img src="https://img.shields.io/badge/Language-Dart-0175C2?style=flat&logo=dart" alt="Dart" /></a>
+<a href="https://flutter.dev" target="_blank"><img src="https://img.shields.io/badge/Platform-Flutter-02569B?style=flat-square&logo=flutter" alt="Flutter" /></a>
+<a href="https://dart.dev" target="_blank"><img src="https://img.shields.io/badge/Language-Dart-0175C2?style=flat-square&logo=dart" alt="Dart" /></a>
 </p>
-
 # Sercom - Mobile App
 
 Aplicación construida con **Flutter** que permite a los técnicos gestionar misiones y a los clientes solicitar servicios de forma intuitiva.
 
-## 🧱 Estructura del Proyecto
+## Estructura del Proyecto
 Basado en el análisis del repositorio actual:
 - **`lib/core`**: Contiene el cliente de API (`api_client.dart`) para la comunicación con el Backend de NestJS.
 - **`lib/screens`**: Interfaces de usuario (Login, Registro, etc.).
 - **`lib/services`**: Lógica de consumo de servicios externos (Auth, Categorías).
 
-## ⚙️ Configuración Inicial
+## Configuración Inicial
 1. Asegúrate de tener instalado el SDK de Flutter.
 2. Obtener dependencias:
    ```bash
