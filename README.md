@@ -10,6 +10,7 @@
 <a href="https://flutter.dev" target="_blank"><img src="https://img.shields.io/badge/Platform-Flutter-02569B?style=flat-square&logo=flutter" alt="Flutter" /></a>
 <a href="https://dart.dev" target="_blank"><img src="https://img.shields.io/badge/Language-Dart-0175C2?style=flat-square&logo=dart" alt="Dart" /></a>
 </p>
+
 # Sercom - Mobile App
 
 Aplicación construida con **Flutter** que permite a los técnicos gestionar misiones y a los clientes solicitar servicios de forma intuitiva.
