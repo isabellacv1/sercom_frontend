@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
 import 'screens/login_page.dart';
+import 'screens/register_page.dart';
+import 'screens/home_page.dart';
+import 'screens/category_services_page.dart';
+import 'screens/create_mission_page.dart';
+import 'screens/mission_dispatch_page.dart';
+import 'screens/missions_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -10,9 +16,18 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: LoginPage(),
+      initialRoute: '/login',
+      routes: {
+        '/login': (context) => const LoginPage(),
+        '/register': (context) => const RegisterPage(),
+        '/home': (context) => const HomePage(),
+        '/category-services': (context) => const CategoryServicesPage(),
+        '/create-mission': (context) => const CreateMissionPage(),
+        '/mission-dispatch': (context) => const MissionDispatchPage(),
+        '/missions': (context) => const MissionsPage(),
+      },
     );
   }
 }

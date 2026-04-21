@@ -1,24 +1,33 @@
 import 'package:dio/dio.dart';
-import 'token_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiClient {
-  final Dio dio = Dio(
-    BaseOptions(
-      baseUrl: 'http://localhost:3000',
-    ),
-  );
+  static final ApiClient _instance = ApiClient._internal();
+  factory ApiClient() => _instance;
 
-  ApiClient() {
+  late final Dio dio;
+
+  ApiClient._internal() {
+    dio = Dio(
+      BaseOptions(
+        baseUrl: 'http://localhost:3000',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      ),
+    );
+
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          final token = await TokenStorage().getToken();
+          final prefs = await SharedPreferences.getInstance();
+          final token = prefs.getString('token');
 
-          if (token != null) {
+          if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
           }
 
-          return handler.next(options);
+          handler.next(options);
         },
       ),
     );

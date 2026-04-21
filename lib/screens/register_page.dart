@@ -1,38 +1,52 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import '../core/token_storage.dart';
 import '../services/auth_service.dart';
-import 'register_page.dart';
+import 'login_page.dart';
 
-class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+class RegisterPage extends StatefulWidget {
+  const RegisterPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  State<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _RegisterPageState extends State<RegisterPage> {
+  final fullNameController = TextEditingController();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   final authService = AuthService();
 
   bool obscurePassword = true;
   bool isLoading = false;
+  bool acceptedTerms = false;
 
   @override
   void dispose() {
+    fullNameController.dispose();
     emailController.dispose();
     passwordController.dispose();
     super.dispose();
   }
 
-  Future<void> onLogin() async {
+  Future<void> onRegister() async {
+    final fullName = fullNameController.text.trim();
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
 
-    if (email.isEmpty || password.isEmpty) {
+    if (fullName.isEmpty || email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Completa correo y contraseña')),
+        const SnackBar(
+          content: Text('Completa nombre, correo y contraseña'),
+        ),
+      );
+      return;
+    }
+
+    if (!acceptedTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Debes aceptar los términos y condiciones'),
+        ),
       );
       return;
     }
@@ -42,29 +56,28 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-    final data = await authService.login(email, password);
-    final token = data['access_token'];
-
-    Navigator.pushReplacementNamed(context, '/home');
-
-      if (token == null || token.toString().isEmpty) {
-        throw Exception('No se recibió el token');
-      }
-
-      await TokenStorage().saveToken(token.toString());
+      final data = await authService.register(
+        fullName: fullName,
+        email: email,
+        password: password,
+      );
 
       if (!mounted) return;
 
+      final message = data['message']?.toString() ?? 'Registro exitoso';
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Login exitoso')),
+        SnackBar(content: Text(message)),
       );
 
-      print('TOKEN: $token');
-
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+      );
     } on DioException catch (e) {
       if (!mounted) return;
 
-      String message = 'Error al iniciar sesión';
+      String message = 'Error al registrarse';
 
       if (e.response?.data is Map<String, dynamic>) {
         final data = e.response!.data as Map<String, dynamic>;
@@ -167,7 +180,7 @@ class _LoginPageState extends State<LoginPage> {
               ),
               const SizedBox(height: 34),
               const Text(
-                '¡Bienvenido\nde vuelta!',
+                'Crea tu cuenta',
                 style: TextStyle(
                   fontSize: 34,
                   height: 1.05,
@@ -177,7 +190,7 @@ class _LoginPageState extends State<LoginPage> {
               ),
               const SizedBox(height: 22),
               const Text(
-                'Inicia sesión para publicar tu próxima misión\ny encontrar al especialista ideal.',
+                'Comienza a publicar misiones hoy mismo y\nsoluciona tus necesidades rápidamente.',
                 style: TextStyle(
                   fontSize: 16,
                   height: 1.5,
@@ -186,6 +199,21 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
               const SizedBox(height: 34),
+              const Text(
+                'Nombre completo',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: textDark,
+                ),
+              ),
+              const SizedBox(height: 12),
+              _CustomInput(
+                controller: fullNameController,
+                hintText: 'Ejemplo',
+                prefixIcon: Icons.person_rounded,
+              ),
+              const SizedBox(height: 28),
               const Text(
                 'Correo electrónico',
                 style: TextStyle(
@@ -230,32 +258,66 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
               ),
-              const SizedBox(height: 14),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () {},
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    minimumSize: const Size(0, 0),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  child: const Text(
-                    '¿Olvidaste tu contraseña?',
-                    style: TextStyle(
-                      color: primaryColor,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
+              const SizedBox(height: 22),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Transform.scale(
+                    scale: 1.05,
+                    child: Checkbox(
+                      value: acceptedTerms,
+                      onChanged: (value) {
+                        setState(() {
+                          acceptedTerms = value ?? false;
+                        });
+                      },
+                      shape: const CircleBorder(),
+                      side: const BorderSide(color: borderColor),
+                      activeColor: primaryColor,
                     ),
                   ),
-                ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: RichText(
+                        text: const TextSpan(
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: textSoft,
+                            height: 1.45,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          children: [
+                            TextSpan(text: 'Acepto los '),
+                            TextSpan(
+                              text: 'términos y condiciones',
+                              style: TextStyle(
+                                color: primaryColor,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            TextSpan(text: ' y la '),
+                            TextSpan(
+                              text: 'política de privacidad',
+                              style: TextStyle(
+                                color: primaryColor,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            TextSpan(text: '.'),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 22),
               SizedBox(
                 width: double.infinity,
                 height: 74,
                 child: ElevatedButton(
-                  onPressed: isLoading ? null : onLogin,
+                  onPressed: isLoading ? null : onRegister,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
                     disabledBackgroundColor: primaryColor.withValues(
@@ -284,7 +346,7 @@ class _LoginPageState extends State<LoginPage> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: const [
                             Text(
-                              'Ingresar',
+                              'Registrarme',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w700,
@@ -293,9 +355,9 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                             SizedBox(width: 10),
                             Icon(
-                              Icons.arrow_forward_rounded,
+                              Icons.person_add_alt_1_rounded,
                               color: Colors.white,
-                              size: 24,
+                              size: 22,
                             ),
                           ],
                         ),
@@ -308,7 +370,7 @@ class _LoginPageState extends State<LoginPage> {
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 14),
                     child: Text(
-                      'o continúa con',
+                      'O regístrate con',
                       style: TextStyle(
                         color: textSoft,
                         fontSize: 14,
@@ -344,7 +406,7 @@ class _LoginPageState extends State<LoginPage> {
                 child: Column(
                   children: [
                     const Text(
-                      '¿Aún no tienes una cuenta?',
+                      '¿Ya tienes una cuenta?',
                       style: TextStyle(
                         color: textSoft,
                         fontSize: 15,
@@ -354,13 +416,15 @@ class _LoginPageState extends State<LoginPage> {
                     const SizedBox(height: 8),
                     GestureDetector(
                       onTap: () {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const RegisterPage()),
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const LoginPage(),
+                          ),
                         );
                       },
                       child: const Text(
-                        'Regístrate ahora',
+                        'Inicia sesión',
                         style: TextStyle(
                           color: primaryColor,
                           fontSize: 15,
