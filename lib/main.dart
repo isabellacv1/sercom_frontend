@@ -6,6 +6,10 @@ import 'screens/category_services_page.dart';
 import 'screens/create_mission_page.dart';
 import 'screens/mission_dispatch_page.dart';
 import 'screens/missions_page.dart';
+import 'screens/candidate_list_screen.dart';
+import 'screens/match_confirmation_screen.dart';
+import 'models/technician.dart';
+import 'screens/technician_profile_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -27,6 +31,7 @@ class MyApp extends StatelessWidget {
         '/create-mission': (context) => const CreateMissionPage(),
         '/mission-dispatch': (context) => const MissionDispatchPage(),
         '/missions': (context) => const MissionsPage(),
+        '/candidates': (context) => const CandidateListScreen(),
       },
     );
   }
