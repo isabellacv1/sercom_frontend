@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import '../models/technician.dart';
+import '../models/mission_model.dart';
+import '../models/proposal.dart';
+import '../services/proposal_service.dart';
 import 'technician_profile_screen.dart';
 
 class CandidateListScreen extends StatefulWidget {
-  const CandidateListScreen({Key? key}) : super(key: key);
+  final String serviceId;
+  final MissionModel mission;
+
+  const CandidateListScreen({Key? key, required this.serviceId, required this.mission}) : super(key: key);
 
   @override
   State<CandidateListScreen> createState() => _CandidateListScreenState();
@@ -11,7 +18,16 @@ class CandidateListScreen extends StatefulWidget {
 
 class _CandidateListScreenState extends State<CandidateListScreen> {
   int _selectedFilter = 0;
-  final List<String> _filters = ['Todos (4)', 'Recomendados', 'Cerca de mí'];
+  final List<String> _filters = ['Todos', 'Recomendados', 'Cerca de mí'];
+  final ProposalService _proposalService = ProposalService();
+  late Future<List<Proposal>> _proposalsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    print('REQUESTING ID: ${widget.serviceId}');
+    _proposalsFuture = _proposalService.getProposalsByService(widget.serviceId);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,9 +75,9 @@ class _CandidateListScreenState extends State<CandidateListScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Instalación de luminarias',
-                    style: TextStyle(
+                  Text(
+                    widget.mission.serviceTitle ?? 'Instalación de luminarias',
+                    style: const TextStyle(
                       color: Color(0xFF0F172A),
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
@@ -69,12 +85,12 @@ class _CandidateListScreenState extends State<CandidateListScreen> {
                   ),
                   const SizedBox(height: 4),
                   Row(
-                    children: const [
-                      Icon(Icons.location_on_outlined, size: 16, color: Color(0xFF64748B)),
-                      SizedBox(width: 4),
+                    children: [
+                      const Icon(Icons.location_on_outlined, size: 16, color: Color(0xFF64748B)),
+                      const SizedBox(width: 4),
                       Text(
-                        'Av. Siempre Viva 123',
-                        style: TextStyle(
+                        widget.mission.address.isNotEmpty ? widget.mission.address : 'Av. Siempre Viva 123',
+                        style: const TextStyle(
                           color: Color(0xFF64748B),
                           fontSize: 14,
                         ),
@@ -160,11 +176,31 @@ class _CandidateListScreenState extends State<CandidateListScreen> {
             ),
             const SizedBox(height: 16),
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                itemCount: mockTechnicians.length,
-                itemBuilder: (context, index) {
-                  return TechnicianCard(technician: mockTechnicians[index]);
+              child: FutureBuilder<List<Proposal>>(
+                future: _proposalsFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  } else if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const Center(
+                      child: Text(
+                        'Aún no hay propuestas para esta misión',
+                        style: TextStyle(color: Color(0xFF64748B), fontSize: 16),
+                      ),
+                    );
+                  }
+
+                  final proposals = snapshot.data!;
+                  return ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    itemCount: proposals.length,
+                    itemBuilder: (context, index) {
+                      final technician = Technician.fromProposal(proposals[index]);
+                      return TechnicianCard(technician: technician);
+                    },
+                  );
                 },
               ),
             ),

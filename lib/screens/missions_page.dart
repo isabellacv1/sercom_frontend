@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/mission_model.dart';
 import '../services/mission_service.dart';
+import 'candidate_list_screen.dart';
 
 class MissionsPage extends StatefulWidget {
   const MissionsPage({super.key});
@@ -286,7 +287,15 @@ class _MissionsPageState extends State<MissionsPage> {
                                           ),
                                         ),
                                         onPressed: () {
-                                          // luego aquí puedes navegar a detalle/ofertas
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => CandidateListScreen(
+                                                serviceId: mission.id,
+                                                mission: mission,
+                                              ),
+                                            ),
+                                          );
                                         },
                                         child: const Text(
                                           'Ver propuestas',

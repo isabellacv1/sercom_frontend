@@ -1,3 +1,5 @@
+import 'proposal.dart';
+
 class Technician {
   final String id;
   final String name;
@@ -30,7 +32,26 @@ class Technician {
     required this.about,
     required this.portfolioUrls,
   });
+
+  factory Technician.fromProposal(Proposal p) {
+    return Technician(
+      id: p.technicianId,
+      name: p.profile?.fullName ?? 'Técnico',
+      title: 'Técnico de la plataforma',
+      rating: p.profile?.ratingAvg ?? 0.0,
+      reviewsCount: p.profile?.ratingCount ?? 0,
+      totalMissions: p.profile?.ratingCount ?? 0, 
+      yearsExperience: 2.0, // Mock
+      distance: p.profile?.city ?? 'Sin ubicación',
+      proposedPrice: p.price.toDouble(),
+      profileImageUrl: p.profile?.avatarUrl ?? 'https://ui-avatars.com/api/?name=User',
+      tags: ['Categoría I'],
+      about: p.message,
+      portfolioUrls: [],
+    );
+  }
 }
+
 
 final mockTechnicians = [
   Technician(

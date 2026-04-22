@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class ApiClient {
   static final ApiClient _instance = ApiClient._internal();
@@ -21,9 +22,10 @@ class ApiClient {
       InterceptorsWrapper(
         onRequest: (options, handler) async {
           final prefs = await SharedPreferences.getInstance();
-          final token = prefs.getString('token');
-
-          if (token != null && token.isNotEmpty) {
+          final secretKey = dotenv.env['SUPABASE_SECRET_KEY'] ?? '';
+          final token = prefs.getString('token') ?? secretKey;
+          
+          if (token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
           }
 

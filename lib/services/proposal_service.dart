@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import '../core/api_client.dart';
 import '../models/proposal_request.dart';
+import '../models/proposal.dart';
 
 class ProposalService {
   final ApiClient _apiClient = ApiClient();
@@ -28,4 +29,15 @@ class ProposalService {
       throw Exception('Error inesperado: $e');
     }
   }
+
+  Future<List<Proposal>> getProposalsByService(String serviceId) async {
+    try {
+      final response = await _apiClient.dio.get('/proposals/service/$serviceId');
+      final data = response.data as List;
+      return data.map((e) => Proposal.fromJson(e)).toList();
+    } catch (e) {
+      throw Exception('Error al cargar propuestas: $e');
+    }
+  }
 }
+

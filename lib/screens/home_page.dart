@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'create_proposal_screen.dart';
 import '../models/category_model.dart';
 import '../services/category_service.dart';
 
@@ -347,21 +348,33 @@ Future<void> loadCategories() async {
                       ),
                     ),
                     const SizedBox(height: 18),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 14,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(26),
-                      ),
-                      child: const Text(
-                        'Ver más',
-                        style: TextStyle(
-                          color: Color(0xFF2563EB),
-                          fontWeight: FontWeight.w800,
-                          fontSize: 16,
+                    InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const CreateProposalScreen(
+                              serviceId: '00000000-0000-0000-0000-000000000000', // Dummy test ID for UI navigation
+                            ),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 14,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(26),
+                        ),
+                        child: const Text(
+                          'Postularse',
+                          style: TextStyle(
+                            color: Color(0xFF2563EB),
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16,
+                          ),
                         ),
                       ),
                     ),
