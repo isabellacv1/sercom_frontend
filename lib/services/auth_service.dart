@@ -19,7 +19,29 @@ class AuthService {
     final data = response.data;
 
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('token', data['access_token']);
+
+    final accessToken = data['access_token'];
+    if (accessToken != null) {
+      await prefs.setString('token', accessToken.toString());
+    }
+
+    final user = data['user'];
+    if (user != null) {
+      final fullName = user['fullName'] ?? user['full_name'] ?? user['name'];
+
+      print('FULLNAME RECIBIDO EN LOGIN: $fullName');
+
+      if (fullName != null && fullName.toString().trim().isNotEmpty) {
+        await prefs.setString('userName', fullName.toString().trim());
+        print('NOMBRE GUARDADO EN PREFS: ${fullName.toString().trim()}');
+      } else {
+        await prefs.remove('userName');
+        print('NO SE PUDO GUARDAR userName');
+      }
+    } else {
+      await prefs.remove('userName');
+      print('LOGIN SIN OBJETO user');
+    }
 
     return data;
   }
@@ -47,10 +69,18 @@ class AuthService {
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('token');
+    await prefs.remove('userName');
   }
 
   Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('token');
+  }
+
+  Future<String?> getUserName() async {
+    final prefs = await SharedPreferences.getInstance();
+    final name = prefs.getString('userName');
+    print('NOMBRE LEIDO DE PREFS: $name');
+    return name;
   }
 }

@@ -26,11 +26,15 @@ class _MissionsPageState extends State<MissionsPage> {
   Future<void> loadMissions() async {
     try {
       final result = await _missionService.getMyMissions();
+      if (!mounted) return;
+
       setState(() {
         missions = result;
         isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
+
       setState(() {
         isLoading = false;
       });
@@ -90,6 +94,15 @@ class _MissionsPageState extends State<MissionsPage> {
     if (min > 0 && max > 0) {
       return '\$$min - \$$max';
     }
+
+    if (min > 0) {
+      return '\$$min';
+    }
+
+    if (max > 0) {
+      return '\$$max';
+    }
+
     return 'A convenir';
   }
 
@@ -107,10 +120,10 @@ class _MissionsPageState extends State<MissionsPage> {
                 children: [
                   Row(
                     children: [
-                      const Expanded(
+                      Expanded(
                         child: Text(
                           'Mis Misiones',
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.w800,
                             color: Color(0xFF0F172A),
@@ -124,7 +137,13 @@ class _MissionsPageState extends State<MissionsPage> {
                           color: const Color(0xFFEFF6FF),
                           borderRadius: BorderRadius.circular(25),
                         ),
-                        child: const Icon(Icons.notifications, color: Color(0xFF2563EB)),
+                        child: IconButton(
+                          onPressed: () {},
+                          icon: const Icon(
+                            Icons.notifications,
+                            color: Color(0xFF2563EB),
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -184,7 +203,11 @@ class _MissionsPageState extends State<MissionsPage> {
                                   children: [
                                     Row(
                                       children: [
-                                        Icon(Icons.circle, size: 12, color: color),
+                                        Icon(
+                                          Icons.circle,
+                                          size: 12,
+                                          color: color,
+                                        ),
                                         const SizedBox(width: 8),
                                         Expanded(
                                           child: Text(
@@ -261,8 +284,11 @@ class _MissionsPageState extends State<MissionsPage> {
                                             ),
                                           ),
                                         ),
-                                        const Icon(Icons.account_balance_wallet_outlined,
-                                            size: 18, color: Color(0xFF2563EB)),
+                                        const Icon(
+                                          Icons.account_balance_wallet_outlined,
+                                          size: 18,
+                                          color: Color(0xFF2563EB),
+                                        ),
                                         const SizedBox(width: 8),
                                         Text(
                                           getBudgetText(mission),
@@ -287,6 +313,8 @@ class _MissionsPageState extends State<MissionsPage> {
                                           ),
                                         ),
                                         onPressed: () {
+                                          // aquí luego puedes navegar al detalle de la misión
+                                          // o a la pantalla de propuestas
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'create_proposal_screen.dart';
 import '../models/category_model.dart';
 import '../services/category_service.dart';
+import '../services/auth_service.dart';
+import 'missions_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -12,50 +14,87 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final CategoryService _categoryService = CategoryService();
+  final AuthService _authService = AuthService();
   final TextEditingController searchController = TextEditingController();
 
   bool isLoading = true;
   List<CategoryModel> categories = [];
   List<CategoryModel> filteredCategories = [];
+  String userName = 'Usuario';
 
   @override
   void initState() {
     super.initState();
-    loadCategories();
+    loadInitialData();
   }
 
-Future<void> loadCategories() async {
-  setState(() {
-    isLoading = true;
-  });
-
-  try {
-    final result = await _categoryService.getCategories();
-
-    print('CATEGORIAS RECIBIDAS: ${result.length}');
-    print(result.map((e) => e.name).toList());
-
-    setState(() {
-      categories = result;
-      filteredCategories = result;
-      isLoading = false;
-    });
-  } catch (e) {
-    print('ERROR CARGANDO CATEGORIAS: $e');
-
-    setState(() {
-      categories = [];
-      filteredCategories = [];
-      isLoading = false;
-    });
-
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Error cargando categorías: $e')),
-    );
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
   }
-}
+
+  Future<void> loadInitialData() async {
+    await Future.wait([
+      loadUserData(),
+      loadCategories(),
+    ]);
+  }
+
+  Future<void> loadUserData() async {
+    try {
+      final savedName = await _authService.getUserName();
+
+      if (!mounted) return;
+
+      setState(() {
+        userName = (savedName != null && savedName.trim().isNotEmpty)
+            ? savedName.trim()
+            : 'Usuario';
+      });
+
+      print('USER NAME EN HOME: $userName');
+    } catch (e) {
+      print('ERROR CARGANDO USUARIO: $e');
+
+      if (!mounted) return;
+      setState(() {
+        userName = 'Usuario';
+      });
+    }
+  }
+
+  Future<void> loadCategories() async {
+    try {
+      final result = await _categoryService.getCategories();
+
+      print('CATEGORIAS RECIBIDAS: ${result.length}');
+      print(result.map((e) => e.name).toList());
+
+      if (!mounted) return;
+      setState(() {
+        categories = result;
+        filteredCategories = result;
+      });
+    } catch (e) {
+      print('ERROR CARGANDO CATEGORIAS: $e');
+
+      if (!mounted) return;
+      setState(() {
+        categories = [];
+        filteredCategories = [];
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error cargando categorías: $e')),
+      );
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
 
   void filterCategories(String query) {
     final q = query.toLowerCase().trim();
@@ -130,7 +169,7 @@ Future<void> loadCategories() async {
                 children: [
                   Expanded(
                     child: RefreshIndicator(
-                      onRefresh: loadCategories,
+                      onRefresh: loadInitialData,
                       child: SingleChildScrollView(
                         physics: const AlwaysScrollableScrollPhysics(),
                         child: Padding(
@@ -155,7 +194,7 @@ Future<void> loadCategories() async {
                       ),
                     ),
                   ),
-                  _buildBottomNav(),
+                  _buildBottomNav(context),
                 ],
               ),
       ),
@@ -179,19 +218,19 @@ Future<void> loadCategories() async {
           ),
         ),
         const SizedBox(width: 14),
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Hola, Luis',
-                style: TextStyle(
+                'Hola, $userName',
+                style: const TextStyle(
                   fontSize: 16,
                   color: Color(0xFF64748B),
                 ),
               ),
-              SizedBox(height: 2),
-              Text(
+              const SizedBox(height: 2),
+              const Text(
                 '¿En qué te ayudamos?',
                 style: TextStyle(
                   fontSize: 20,
@@ -312,11 +351,7 @@ Future<void> loadCategories() async {
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
-                            Icons.bolt,
-                            color: Colors.white,
-                            size: 16,
-                          ),
+                          Icon(Icons.bolt, color: Colors.white, size: 16),
                           SizedBox(width: 6),
                           Text(
                             'Prioritario',
@@ -407,44 +442,44 @@ Future<void> loadCategories() async {
     );
   }
 
-Widget _buildPublishButton(BuildContext context) {
-  return SizedBox(
-    width: double.infinity,
-    height: 82,
-    child: ElevatedButton(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF2563EB),
-        foregroundColor: Colors.white,
-        elevation: 10,
-        shadowColor: const Color(0x332563EB),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(22),
+  Widget _buildPublishButton(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 82,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF2563EB),
+          foregroundColor: Colors.white,
+          elevation: 10,
+          shadowColor: const Color(0x332563EB),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+          ),
+        ),
+        onPressed: () {
+          print('Selecciona una categoría para publicar una misión');
+        },
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: Color(0x33FFFFFF),
+              child: Icon(Icons.add, color: Colors.white, size: 26),
+            ),
+            SizedBox(width: 12),
+            Text(
+              'Publicar misión',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
         ),
       ),
-      onPressed: () {
-        print('Selecciona una categoría para publicar una misión');
-      },
-      child: const Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: Color(0x33FFFFFF),
-            child: Icon(Icons.add, color: Colors.white, size: 26),
-          ),
-          SizedBox(width: 12),
-          Text(
-            'Publicar misión',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildCategoryHeader() {
     return Row(
@@ -573,7 +608,7 @@ Widget _buildPublishButton(BuildContext context) {
     );
   }
 
-  Widget _buildBottomNav() {
+  Widget _buildBottomNav(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
       decoration: const BoxDecoration(
@@ -582,25 +617,40 @@ Widget _buildPublishButton(BuildContext context) {
           top: BorderSide(color: Color(0xFFE5E7EB)),
         ),
       ),
-      child: const Row(
+      child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _BottomItem(
             icon: Icons.home_filled,
             label: 'Inicio',
             selected: true,
+            onTap: () {},
           ),
           _BottomItem(
             icon: Icons.assignment_outlined,
             label: 'Misiones',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const MissionsPage(),
+                ),
+              );
+            },
           ),
           _BottomItem(
             icon: Icons.chat_bubble_outline,
             label: 'Mensajes',
+            onTap: () {
+              // Aquí luego navegas a mensajes
+            },
           ),
           _BottomItem(
             icon: Icons.person_outline,
             label: 'Perfil',
+            onTap: () {
+              // Aquí luego navegas a perfil
+            },
           ),
         ],
       ),
@@ -612,31 +662,40 @@ class _BottomItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final bool selected;
+  final VoidCallback? onTap;
 
   const _BottomItem({
     required this.icon,
     required this.label,
     this.selected = false,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final color = selected ? const Color(0xFF2563EB) : const Color(0xFF94A3B8);
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: color, size: 28),
-        const SizedBox(height: 6),
-        Text(
-          label,
-          style: TextStyle(
-            color: color,
-            fontSize: 13,
-            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-          ),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 28),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 13,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
