@@ -4,11 +4,11 @@ import '../services/auth_service.dart';
 import 'login_page.dart';
 
 class RegisterPage extends StatefulWidget {
-  final String roles;
+  final String role;
 
   const RegisterPage({
     super.key,
-    required this.roles,
+    required this.role,
   });
 
   @override
@@ -31,8 +31,8 @@ class _RegisterPageState extends State<RegisterPage> {
   bool isLoading = false;
   bool acceptedTerms = false;
 
-  bool get isWorker => widget.roles == 'worker';
-  bool get isClient => widget.roles == 'client';
+  bool get isWorker => widget.role == 'worker';
+  bool get isClient => widget.role == 'client';
 
   @override
   void dispose() {
@@ -93,7 +93,8 @@ class _RegisterPageState extends State<RegisterPage> {
         fullName: fullName,
         email: email,
         password: password,
-        roles: widget.roles,
+        roles: [widget.role],
+        activeRole: widget.role,
         cedula: isWorker ? cedula : null,
         phone: isWorker ? phone : null,
         address: isWorker ? address : null,
@@ -242,7 +243,6 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
               ),
               const SizedBox(height: 34),
-
               const Text(
                 'Nombre completo',
                 style: TextStyle(
@@ -258,7 +258,6 @@ class _RegisterPageState extends State<RegisterPage> {
                 prefixIcon: Icons.person_rounded,
                 accentColor: accentColor,
               ),
-
               const SizedBox(height: 28),
               const Text(
                 'Correo electrónico',
@@ -276,7 +275,6 @@ class _RegisterPageState extends State<RegisterPage> {
                 keyboardType: TextInputType.emailAddress,
                 accentColor: accentColor,
               ),
-
               const SizedBox(height: 28),
               const Text(
                 'Contraseña',
@@ -307,7 +305,6 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                 ),
               ),
-
               if (isWorker) ...[
                 const SizedBox(height: 28),
                 const Text(
@@ -326,7 +323,6 @@ class _RegisterPageState extends State<RegisterPage> {
                   keyboardType: TextInputType.number,
                   accentColor: accentColor,
                 ),
-
                 const SizedBox(height: 28),
                 const Text(
                   'Teléfono',
@@ -344,7 +340,6 @@ class _RegisterPageState extends State<RegisterPage> {
                   keyboardType: TextInputType.phone,
                   accentColor: accentColor,
                 ),
-
                 const SizedBox(height: 28),
                 const Text(
                   'Dirección',
@@ -361,7 +356,6 @@ class _RegisterPageState extends State<RegisterPage> {
                   prefixIcon: Icons.location_on_rounded,
                   accentColor: accentColor,
                 ),
-
                 const SizedBox(height: 28),
                 const Text(
                   'Especialidad',
@@ -379,7 +373,6 @@ class _RegisterPageState extends State<RegisterPage> {
                   accentColor: accentColor,
                 ),
               ],
-
               const SizedBox(height: 22),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -434,7 +427,6 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                 ],
               ),
-
               const SizedBox(height: 22),
               SizedBox(
                 width: double.infinity,
@@ -463,9 +455,9 @@ class _RegisterPageState extends State<RegisterPage> {
                             ),
                           ),
                         )
-                      : Row(
+                      : const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
+                          children: [
                             Text(
                               'Registrarme',
                               style: TextStyle(
@@ -484,7 +476,6 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                 ),
               ),
-
               const SizedBox(height: 42),
               Center(
                 child: Column(

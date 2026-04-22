@@ -38,10 +38,10 @@ class AuthService {
         print('NO SE PUDO GUARDAR userName');
       }
 
-      final roles = user['roles'] ?? user['active_role'];
-      if (roles != null && roles.toString().trim().isNotEmpty) {
-        await prefs.setString('userRole', roles.toString().trim());
-        print('ROL GUARDADO EN PREFS: ${roles.toString().trim()}');
+      final activeRole = user['activeRole'] ?? user['active_role'];
+      if (activeRole != null && activeRole.toString().trim().isNotEmpty) {
+        await prefs.setString('userRole', activeRole.toString().trim());
+        print('ROL GUARDADO EN PREFS: ${activeRole.toString().trim()}');
       } else {
         await prefs.remove('userRole');
         print('NO SE PUDO GUARDAR userRole');
@@ -59,24 +59,30 @@ class AuthService {
     required String fullName,
     required String email,
     required String password,
-    required String roles,
+    required List<String> roles,
+    required String activeRole,
     String? cedula,
     String? phone,
     String? address,
     String? specialty,
   }) async {
+    final body = {
+      'fullName': fullName,
+      'email': email,
+      'password': password,
+      'roles': roles,
+      'activeRole': activeRole,
+      'cedula': cedula,
+      'phone': phone,
+      'address': address,
+      'specialty': specialty,
+    };
+
+    print('REGISTER BODY: $body');
+
     final response = await api.post(
       '/auth/register',
-      data: {
-        'fullName': fullName,
-        'email': email,
-        'password': password,
-        'roles': roles,
-        'cedula': cedula,
-        'phone': phone,
-        'address': address,
-        'specialty': specialty,
-      },
+      data: body,
     );
 
     print('REGISTER STATUS: ${response.statusCode}');
@@ -106,8 +112,8 @@ class AuthService {
 
   Future<String?> getUserRole() async {
     final prefs = await SharedPreferences.getInstance();
-    final roles = prefs.getString('userRole');
-    print('ROL LEIDO DE PREFS: $roles');
-    return roles;
+    final role = prefs.getString('userRole');
+    print('ROL LEIDO DE PREFS: $role');
+    return role;
   }
 }

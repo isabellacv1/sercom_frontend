@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'screens/auth_gate.dart';
 import 'screens/login_page.dart';
 import 'screens/register_page.dart';
 import 'screens/home_page.dart';
@@ -10,7 +11,6 @@ import 'screens/missions_page.dart';
 import 'screens/match_confirmation_screen.dart';
 import 'screens/technician_profile_screen.dart';
 import 'screens/role_selection_page.dart';
-import 'screens/auth_gate.dart';
 
 import 'models/technician.dart';
 
@@ -38,10 +38,10 @@ class MyApp extends StatelessWidget {
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/register') {
-          final roles = settings.arguments as String;
+          final role = settings.arguments as String;
 
           return MaterialPageRoute(
-            builder: (_) => RegisterPage(roles: roles),
+            builder: (_) => RegisterPage(role: role),
           );
         }
 
