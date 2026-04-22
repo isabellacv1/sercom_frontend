@@ -2,7 +2,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import '../core/token_storage.dart';
 import '../services/auth_service.dart';
-import 'register_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -42,10 +41,8 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-    final data = await authService.login(email, password);
-    final token = data['access_token'];
-
-    Navigator.pushReplacementNamed(context, '/home');
+      final data = await authService.login(email, password);
+      final token = data['access_token'];
 
       if (token == null || token.toString().isEmpty) {
         throw Exception('No se recibió el token');
@@ -59,8 +56,11 @@ class _LoginPageState extends State<LoginPage> {
         const SnackBar(content: Text('Login exitoso')),
       );
 
-      print('TOKEN: $token');
-
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/home',
+        (route) => false,
+      );
     } on DioException catch (e) {
       if (!mounted) return;
 
@@ -177,7 +177,7 @@ class _LoginPageState extends State<LoginPage> {
               ),
               const SizedBox(height: 22),
               const Text(
-                'Inicia sesión para publicar tu próxima misión\ny encontrar al especialista ideal.',
+                'Inicia sesión para continuar en TaskRank.',
                 style: TextStyle(
                   fontSize: 16,
                   height: 1.5,
@@ -354,10 +354,7 @@ class _LoginPageState extends State<LoginPage> {
                     const SizedBox(height: 8),
                     GestureDetector(
                       onTap: () {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const RegisterPage()),
-                        );
+                        Navigator.pushNamed(context, '/roles');
                       },
                       child: const Text(
                         'Regístrate ahora',

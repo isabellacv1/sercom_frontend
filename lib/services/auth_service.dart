@@ -17,7 +17,6 @@ class AuthService {
     print('LOGIN DATA: ${response.data}');
 
     final data = response.data;
-
     final prefs = await SharedPreferences.getInstance();
 
     final accessToken = data['access_token'];
@@ -38,8 +37,18 @@ class AuthService {
         await prefs.remove('userName');
         print('NO SE PUDO GUARDAR userName');
       }
+
+      final roles = user['roles'] ?? user['active_role'];
+      if (roles != null && roles.toString().trim().isNotEmpty) {
+        await prefs.setString('userRole', roles.toString().trim());
+        print('ROL GUARDADO EN PREFS: ${roles.toString().trim()}');
+      } else {
+        await prefs.remove('userRole');
+        print('NO SE PUDO GUARDAR userRole');
+      }
     } else {
       await prefs.remove('userName');
+      await prefs.remove('userRole');
       print('LOGIN SIN OBJETO user');
     }
 
@@ -50,6 +59,11 @@ class AuthService {
     required String fullName,
     required String email,
     required String password,
+    required String roles,
+    String? cedula,
+    String? phone,
+    String? address,
+    String? specialty,
   }) async {
     final response = await api.post(
       '/auth/register',
@@ -57,6 +71,11 @@ class AuthService {
         'fullName': fullName,
         'email': email,
         'password': password,
+        'roles': roles,
+        'cedula': cedula,
+        'phone': phone,
+        'address': address,
+        'specialty': specialty,
       },
     );
 
@@ -70,6 +89,7 @@ class AuthService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('token');
     await prefs.remove('userName');
+    await prefs.remove('userRole');
   }
 
   Future<String?> getToken() async {
@@ -82,5 +102,12 @@ class AuthService {
     final name = prefs.getString('userName');
     print('NOMBRE LEIDO DE PREFS: $name');
     return name;
+  }
+
+  Future<String?> getUserRole() async {
+    final prefs = await SharedPreferences.getInstance();
+    final roles = prefs.getString('userRole');
+    print('ROL LEIDO DE PREFS: $roles');
+    return roles;
   }
 }

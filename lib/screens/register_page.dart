@@ -4,7 +4,12 @@ import '../services/auth_service.dart';
 import 'login_page.dart';
 
 class RegisterPage extends StatefulWidget {
-  const RegisterPage({super.key});
+  final String roles;
+
+  const RegisterPage({
+    super.key,
+    required this.roles,
+  });
 
   @override
   State<RegisterPage> createState() => _RegisterPageState();
@@ -14,17 +19,30 @@ class _RegisterPageState extends State<RegisterPage> {
   final fullNameController = TextEditingController();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
+
+  final cedulaController = TextEditingController();
+  final phoneController = TextEditingController();
+  final addressController = TextEditingController();
+  final specialtyController = TextEditingController();
+
   final authService = AuthService();
 
   bool obscurePassword = true;
   bool isLoading = false;
   bool acceptedTerms = false;
 
+  bool get isWorker => widget.roles == 'worker';
+  bool get isClient => widget.roles == 'client';
+
   @override
   void dispose() {
     fullNameController.dispose();
     emailController.dispose();
     passwordController.dispose();
+    cedulaController.dispose();
+    phoneController.dispose();
+    addressController.dispose();
+    specialtyController.dispose();
     super.dispose();
   }
 
@@ -32,6 +50,10 @@ class _RegisterPageState extends State<RegisterPage> {
     final fullName = fullNameController.text.trim();
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
+    final cedula = cedulaController.text.trim();
+    final phone = phoneController.text.trim();
+    final address = addressController.text.trim();
+    final specialty = specialtyController.text.trim();
 
     if (fullName.isEmpty || email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -40,6 +62,17 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
       );
       return;
+    }
+
+    if (isWorker) {
+      if (cedula.isEmpty || phone.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Completa cédula y teléfono'),
+          ),
+        );
+        return;
+      }
     }
 
     if (!acceptedTerms) {
@@ -60,6 +93,11 @@ class _RegisterPageState extends State<RegisterPage> {
         fullName: fullName,
         email: email,
         password: password,
+        roles: widget.roles,
+        cedula: isWorker ? cedula : null,
+        phone: isWorker ? phone : null,
+        address: isWorker ? address : null,
+        specialty: isWorker ? specialty : null,
       );
 
       if (!mounted) return;
@@ -112,9 +150,12 @@ class _RegisterPageState extends State<RegisterPage> {
   Widget build(BuildContext context) {
     const backgroundColor = Color(0xFFF5F6FA);
     const primaryColor = Color(0xFF3366E8);
+    const workerColor = Color(0xFFFF8A00);
     const textDark = Color(0xFF101828);
     const textSoft = Color(0xFF6B7A99);
     const borderColor = Color(0xFFD9DEE8);
+
+    final accentColor = isWorker ? workerColor : primaryColor;
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -155,23 +196,23 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   const Spacer(),
                   Row(
-                    children: const [
+                    children: [
                       CircleAvatar(
                         radius: 18,
-                        backgroundColor: primaryColor,
-                        child: Icon(
+                        backgroundColor: accentColor,
+                        child: const Icon(
                           Icons.verified_user_outlined,
                           color: Colors.white,
                           size: 20,
                         ),
                       ),
-                      SizedBox(width: 10),
+                      const SizedBox(width: 10),
                       Text(
                         'TaskRank',
                         style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w800,
-                          color: primaryColor,
+                          color: accentColor,
                         ),
                       ),
                     ],
@@ -179,9 +220,9 @@ class _RegisterPageState extends State<RegisterPage> {
                 ],
               ),
               const SizedBox(height: 34),
-              const Text(
-                'Crea tu cuenta',
-                style: TextStyle(
+              Text(
+                isWorker ? 'Crea tu cuenta de trabajador' : 'Crea tu cuenta',
+                style: const TextStyle(
                   fontSize: 34,
                   height: 1.05,
                   fontWeight: FontWeight.w800,
@@ -189,9 +230,11 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
               ),
               const SizedBox(height: 22),
-              const Text(
-                'Comienza a publicar misiones hoy mismo y\nsoluciona tus necesidades rápidamente.',
-                style: TextStyle(
+              Text(
+                isWorker
+                    ? 'Completa tus datos para comenzar a recibir misiones y generar ingresos.'
+                    : 'Completa tus datos para publicar misiones y encontrar al especialista ideal.',
+                style: const TextStyle(
                   fontSize: 16,
                   height: 1.5,
                   color: textSoft,
@@ -199,6 +242,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
               ),
               const SizedBox(height: 34),
+
               const Text(
                 'Nombre completo',
                 style: TextStyle(
@@ -212,7 +256,9 @@ class _RegisterPageState extends State<RegisterPage> {
                 controller: fullNameController,
                 hintText: 'Ejemplo',
                 prefixIcon: Icons.person_rounded,
+                accentColor: accentColor,
               ),
+
               const SizedBox(height: 28),
               const Text(
                 'Correo electrónico',
@@ -228,7 +274,9 @@ class _RegisterPageState extends State<RegisterPage> {
                 hintText: 'ejemplo@gmail.com',
                 prefixIcon: Icons.mail_rounded,
                 keyboardType: TextInputType.emailAddress,
+                accentColor: accentColor,
               ),
+
               const SizedBox(height: 28),
               const Text(
                 'Contraseña',
@@ -244,6 +292,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 hintText: '••••••••',
                 prefixIcon: Icons.lock_rounded,
                 obscureText: obscurePassword,
+                accentColor: accentColor,
                 suffix: IconButton(
                   onPressed: () {
                     setState(() {
@@ -258,6 +307,79 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                 ),
               ),
+
+              if (isWorker) ...[
+                const SizedBox(height: 28),
+                const Text(
+                  'Cédula',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: textDark,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _CustomInput(
+                  controller: cedulaController,
+                  hintText: 'Ingresa tu cédula',
+                  prefixIcon: Icons.badge_rounded,
+                  keyboardType: TextInputType.number,
+                  accentColor: accentColor,
+                ),
+
+                const SizedBox(height: 28),
+                const Text(
+                  'Teléfono',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: textDark,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _CustomInput(
+                  controller: phoneController,
+                  hintText: 'Ingresa tu teléfono',
+                  prefixIcon: Icons.phone_rounded,
+                  keyboardType: TextInputType.phone,
+                  accentColor: accentColor,
+                ),
+
+                const SizedBox(height: 28),
+                const Text(
+                  'Dirección',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: textDark,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _CustomInput(
+                  controller: addressController,
+                  hintText: 'Ingresa tu dirección',
+                  prefixIcon: Icons.location_on_rounded,
+                  accentColor: accentColor,
+                ),
+
+                const SizedBox(height: 28),
+                const Text(
+                  'Especialidad',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: textDark,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _CustomInput(
+                  controller: specialtyController,
+                  hintText: 'Ej. Electricista, Plomero...',
+                  prefixIcon: Icons.build_rounded,
+                  accentColor: accentColor,
+                ),
+              ],
+
               const SizedBox(height: 22),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -273,38 +395,38 @@ class _RegisterPageState extends State<RegisterPage> {
                       },
                       shape: const CircleBorder(),
                       side: const BorderSide(color: borderColor),
-                      activeColor: primaryColor,
+                      activeColor: accentColor,
                     ),
                   ),
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.only(top: 10),
                       child: RichText(
-                        text: const TextSpan(
-                          style: TextStyle(
+                        text: TextSpan(
+                          style: const TextStyle(
                             fontSize: 14,
                             color: textSoft,
                             height: 1.45,
                             fontWeight: FontWeight.w500,
                           ),
                           children: [
-                            TextSpan(text: 'Acepto los '),
+                            const TextSpan(text: 'Acepto los '),
                             TextSpan(
                               text: 'términos y condiciones',
                               style: TextStyle(
-                                color: primaryColor,
+                                color: accentColor,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
-                            TextSpan(text: ' y la '),
+                            const TextSpan(text: ' y la '),
                             TextSpan(
                               text: 'política de privacidad',
                               style: TextStyle(
-                                color: primaryColor,
+                                color: accentColor,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
-                            TextSpan(text: '.'),
+                            const TextSpan(text: '.'),
                           ],
                         ),
                       ),
@@ -312,6 +434,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                 ],
               ),
+
               const SizedBox(height: 22),
               SizedBox(
                 width: double.infinity,
@@ -319,15 +442,13 @@ class _RegisterPageState extends State<RegisterPage> {
                 child: ElevatedButton(
                   onPressed: isLoading ? null : onRegister,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    disabledBackgroundColor: primaryColor.withValues(
-                      alpha: 0.7,
-                    ),
+                    backgroundColor: accentColor,
+                    disabledBackgroundColor: accentColor.withValues(alpha: 0.7),
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(22),
                     ),
-                    shadowColor: primaryColor.withValues(alpha: 0.35),
+                    shadowColor: accentColor.withValues(alpha: 0.35),
                   ).copyWith(
                     elevation: const WidgetStatePropertyAll(10),
                   ),
@@ -363,44 +484,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                 ),
               ),
-              const SizedBox(height: 34),
-              Row(
-                children: const [
-                  Expanded(child: Divider(color: Color(0xFFD5DBE6))),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 14),
-                    child: Text(
-                      'O regístrate con',
-                      style: TextStyle(
-                        color: textSoft,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  Expanded(child: Divider(color: Color(0xFFD5DBE6))),
-                ],
-              ),
-              const SizedBox(height: 28),
-              Row(
-                children: [
-                  Expanded(
-                    child: _SocialButton(
-                      text: 'Google',
-                      icon: Icons.g_mobiledata_rounded,
-                      onTap: () {},
-                    ),
-                  ),
-                  const SizedBox(width: 18),
-                  Expanded(
-                    child: _SocialButton(
-                      text: 'Apple',
-                      icon: Icons.apple,
-                      onTap: () {},
-                    ),
-                  ),
-                ],
-              ),
+
               const SizedBox(height: 42),
               Center(
                 child: Column(
@@ -423,10 +507,10 @@ class _RegisterPageState extends State<RegisterPage> {
                           ),
                         );
                       },
-                      child: const Text(
+                      child: Text(
                         'Inicia sesión',
                         style: TextStyle(
-                          color: primaryColor,
+                          color: accentColor,
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
                         ),
@@ -450,11 +534,13 @@ class _CustomInput extends StatelessWidget {
   final Widget? suffix;
   final bool obscureText;
   final TextInputType? keyboardType;
+  final Color accentColor;
 
   const _CustomInput({
     required this.controller,
     required this.hintText,
     required this.prefixIcon,
+    required this.accentColor,
     this.suffix,
     this.obscureText = false,
     this.keyboardType,
@@ -507,8 +593,8 @@ class _CustomInput extends StatelessWidget {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(22),
-            borderSide: const BorderSide(
-              color: Color(0xFF3366E8),
+            borderSide: BorderSide(
+              color: accentColor,
               width: 1.2,
             ),
           ),
@@ -518,59 +604,6 @@ class _CustomInput extends StatelessWidget {
             horizontal: 18,
             vertical: 22,
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SocialButton extends StatelessWidget {
-  final String text;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _SocialButton({
-    required this.text,
-    required this.icon,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const borderColor = Color(0xFFD9DEE8);
-    const textDark = Color(0xFF101828);
-
-    return InkWell(
-      borderRadius: BorderRadius.circular(20),
-      onTap: onTap,
-      child: Container(
-        height: 78,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: borderColor),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x12000000),
-              blurRadius: 8,
-              offset: Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 28, color: Colors.black),
-            const SizedBox(width: 10),
-            Text(
-              text,
-              style: const TextStyle(
-                fontSize: 16,
-                color: textDark,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
         ),
       ),
     );
