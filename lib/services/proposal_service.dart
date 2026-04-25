@@ -31,7 +31,13 @@ class ProposalService {
       throw Exception('Error inesperado: $e');
     }
   }
-
+  Future<void> acceptProposal(String proposalId) async {
+  try {
+    await _apiClient.dio.post('/proposals/$proposalId/accept');
+  } catch (e) {
+    throw Exception('Error al aceptar la propuesta');
+  }
+}
   Future<List<Proposal>> getProposalsByService(String serviceId) async {
     try {
       final response = await _apiClient.dio.get(
