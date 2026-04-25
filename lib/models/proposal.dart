@@ -6,6 +6,11 @@ class Proposal {
   final String message;
   final String? estimatedDuration;
   final String status;
+
+  final String? availableDate;
+  final String? availableFrom;
+  final String? availableTo;
+
   final Profile? profile;
 
   Proposal({
@@ -16,32 +21,26 @@ class Proposal {
     required this.message,
     this.estimatedDuration,
     required this.status,
+    this.availableDate,
+    this.availableFrom,
+    this.availableTo,
     this.profile,
   });
 
   factory Proposal.fromJson(Map<String, dynamic> json) {
-    try {
-      return Proposal(
-        id: json['id']?.toString() ?? '',
-        serviceId: json['service_id']?.toString() ?? '',
-        technicianId: json['technician_id']?.toString() ?? '',
-        price: num.tryParse(json['price']?.toString() ?? '0') ?? 0,
-        message: json['message']?.toString() ?? '',
-        estimatedDuration: json['estimated_duration']?.toString(),
-        status: json['status']?.toString() ?? 'pending',
-        profile: json['profiles'] != null ? Profile.fromJson(json['profiles']) : null,
-      );
-    } catch (e) {
-      print('PARSING ERROR: $e');
-      return Proposal(
-        id: '',
-        serviceId: '',
-        technicianId: '',
-        price: 0,
-        message: 'Error local cargando propuesta',
-        status: 'error',
-      );
-    }
+    return Proposal(
+      id: json['id']?.toString() ?? '',
+      serviceId: json['serviceId']?.toString() ?? '',
+      technicianId: json['worker']?['id']?.toString() ?? '',
+      price: num.tryParse(json['price']?.toString() ?? '0') ?? 0,
+      message: json['description']?.toString() ?? '',
+      estimatedDuration: json['estimatedTime']?.toString(),
+      status: json['status']?.toString() ?? 'pending',
+      availableDate: json['availableDate']?.toString(),
+      availableFrom: json['availableFrom']?.toString(),
+      availableTo: json['availableTo']?.toString(),
+      profile: json['worker'] != null ? Profile.fromJson(json['worker']) : null,
+    );
   }
 }
 
@@ -61,23 +60,13 @@ class Profile {
   });
 
   factory Profile.fromJson(Map<String, dynamic> json) {
-    try {
-      return Profile(
-        fullName: json['full_name']?.toString() ?? 'Técnico',
-        avatarUrl: json['profile_image_url']?.toString() ?? 'https://ui-avatars.com/api/?name=User',
-        ratingAvg: double.tryParse(json['rating_avg']?.toString() ?? '0.0') ?? 0.0,
-        ratingCount: int.tryParse(json['rating_count']?.toString() ?? '0') ?? 0,
-        city: json['city']?.toString() ?? 'Sin ubicación',
-      );
-    } catch (e) {
-      print('PARSING ERROR: $e');
-      return Profile(
-        fullName: 'Técnico Desconocido',
-        avatarUrl: 'https://ui-avatars.com/api/?name=User',
-        ratingAvg: 0.0,
-        ratingCount: 0,
-        city: 'Sin ubicación',
-      );
-    }
+    return Profile(
+      fullName: json['name']?.toString() ?? 'Técnico',
+      avatarUrl: json['profileImageUrl']?.toString() ??
+          'https://ui-avatars.com/api/?name=${json['name'] ?? 'User'}',
+      ratingAvg: double.tryParse(json['rating']?.toString() ?? '0.0') ?? 0.0,
+      ratingCount: int.tryParse(json['ratingCount']?.toString() ?? '0') ?? 0,
+      city: 'Sin ubicación',
+    );
   }
 }

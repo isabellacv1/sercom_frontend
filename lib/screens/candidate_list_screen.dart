@@ -222,11 +222,32 @@ class _CandidateListScreenState extends State<CandidateListScreen> {
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: const [
-          _BottomItem(icon: Icons.home_outlined, label: 'Inicio'),
-          _BottomItem(icon: Icons.assignment, label: 'Misiones', selected: true),
-          _BottomItem(icon: Icons.chat_bubble_outline, label: 'Mensajes'),
-          _BottomItem(icon: Icons.person_outline, label: 'Perfil'),
+        children: [
+          _BottomItem(
+            icon: Icons.home_outlined,
+            label: 'Inicio',
+            onTap: () {
+              Navigator.popUntil(context, (route) => route.isFirst);
+            },
+          ),
+          _BottomItem(
+            icon: Icons.assignment,
+            label: 'Misiones',
+            selected: true,
+            onTap: () {
+              Navigator.pop(context);
+            },
+          ),
+          _BottomItem(
+            icon: Icons.chat_bubble_outline,
+            label: 'Mensajes',
+            onTap: () {},
+          ),
+          _BottomItem(
+            icon: Icons.person_outline,
+            label: 'Perfil',
+            onTap: () {},
+          ),
         ],
       ),
     );
@@ -237,31 +258,36 @@ class _BottomItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final bool selected;
+  final VoidCallback? onTap;
 
   const _BottomItem({
     required this.icon,
     required this.label,
     this.selected = false,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final color = selected ? const Color(0xFF2563EB) : const Color(0xFF94A3B8);
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: color, size: 28),
-        const SizedBox(height: 6),
-        Text(
-          label,
-          style: TextStyle(
-            color: color,
-            fontSize: 13,
-            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 28),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 13,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
