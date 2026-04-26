@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../core/token_storage.dart';
 import 'home_page.dart';
+import 'worker_home_screen.dart';
 import 'login_page.dart';
+import '../services/auth_service.dart';
 
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
@@ -11,15 +13,19 @@ class AuthGate extends StatefulWidget {
 }
 
 class _AuthGateState extends State<AuthGate> {
-  Future<bool> _hasSession() async {
+  Future<Map<String, dynamic>> _checkSession() async {
     final token = await TokenStorage().getToken();
-    return token != null && token.isNotEmpty;
+    if (token != null && token.isNotEmpty) {
+      final role = await AuthService().getUserRole();
+      return {'hasSession': true, 'role': role};
+    }
+    return {'hasSession': false};
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<bool>(
-      future: _hasSession(),
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _checkSession(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
@@ -29,7 +35,11 @@ class _AuthGateState extends State<AuthGate> {
           );
         }
 
-        if (snapshot.data == true) {
+        if (snapshot.data?['hasSession'] == true) {
+          final role = snapshot.data?['role'];
+          if (role == 'technician' || role == 'worker') {
+            return const WorkerHomeScreen();
+          }
           return const HomePage();
         }
 

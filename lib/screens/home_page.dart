@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'create_proposal_screen.dart';
 import '../models/category_model.dart';
 import '../services/category_service.dart';
 import '../services/auth_service.dart';
 import 'missions_page.dart';
+import 'profile_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -21,6 +21,9 @@ class _HomePageState extends State<HomePage> {
   List<CategoryModel> categories = [];
   List<CategoryModel> filteredCategories = [];
   String userName = 'Usuario';
+  
+  int _currentIndex = 0;
+  final PageController _pageController = PageController();
 
   @override
   void initState() {
@@ -31,6 +34,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     searchController.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 
@@ -168,35 +172,48 @@ class _HomePageState extends State<HomePage> {
             : Column(
                 children: [
                   Expanded(
-                    child: RefreshIndicator(
-                      onRefresh: loadInitialData,
-                      child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildHeader(),
-                              const SizedBox(height: 22),
-                              _buildSearchBar(),
-                              const SizedBox(height: 24),
-                              _buildExpressCard(),
-                              const SizedBox(height: 24),
-                              _buildPublishButton(context),
-                              const SizedBox(height: 28),
-                              _buildCategoryHeader(),
-                              const SizedBox(height: 18),
-                              _buildCategoriesGrid(context),
-                            ],
-                          ),
-                        ),
-                      ),
+                    child: PageView(
+                      controller: _pageController,
+                      physics: const NeverScrollableScrollPhysics(),
+                      children: [
+                        _buildHomeContent(),
+                        const MissionsPage(),
+                        const Center(child: Text('Mensajes')),
+                        const ProfilePage(),
+                      ],
                     ),
                   ),
                   _buildBottomNav(context),
                 ],
               ),
+      ),
+    );
+  }
+
+  Widget _buildHomeContent() {
+    return RefreshIndicator(
+      onRefresh: loadInitialData,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(),
+              const SizedBox(height: 22),
+              _buildSearchBar(),
+              const SizedBox(height: 24),
+              _buildExpressCard(),
+              const SizedBox(height: 24),
+              _buildPublishButton(context),
+              const SizedBox(height: 28),
+              _buildCategoryHeader(),
+              const SizedBox(height: 18),
+              _buildCategoriesGrid(context),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -385,14 +402,7 @@ class _HomePageState extends State<HomePage> {
                     const SizedBox(height: 18),
                     InkWell(
                       onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const CreateProposalScreen(
-                              serviceId: '00000000-0000-0000-0000-000000000000', // Dummy test ID for UI navigation
-                            ),
-                          ),
-                        );
+                        // Action to publish express mission
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(
@@ -404,7 +414,7 @@ class _HomePageState extends State<HomePage> {
                           borderRadius: BorderRadius.circular(26),
                         ),
                         child: const Text(
-                          'Postularse',
+                          'Publicar Urgente',
                           style: TextStyle(
                             color: Color(0xFF2563EB),
                             fontWeight: FontWeight.w800,
@@ -623,33 +633,37 @@ class _HomePageState extends State<HomePage> {
           _BottomItem(
             icon: Icons.home_filled,
             label: 'Inicio',
-            selected: true,
-            onTap: () {},
+            selected: _currentIndex == 0,
+            onTap: () {
+              setState(() => _currentIndex = 0);
+              _pageController.jumpToPage(0);
+            },
           ),
           _BottomItem(
             icon: Icons.assignment_outlined,
             label: 'Misiones',
+            selected: _currentIndex == 1,
             onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const MissionsPage(),
-                ),
-              );
+              setState(() => _currentIndex = 1);
+              _pageController.jumpToPage(1);
             },
           ),
           _BottomItem(
             icon: Icons.chat_bubble_outline,
             label: 'Mensajes',
+            selected: _currentIndex == 2,
             onTap: () {
-              // Aquí luego navegas a mensajes
+              setState(() => _currentIndex = 2);
+              _pageController.jumpToPage(2);
             },
           ),
           _BottomItem(
             icon: Icons.person_outline,
             label: 'Perfil',
+            selected: _currentIndex == 3,
             onTap: () {
-              // Aquí luego navegas a perfil
+              setState(() => _currentIndex = 3);
+              _pageController.jumpToPage(3);
             },
           ),
         ],

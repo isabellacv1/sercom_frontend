@@ -2,13 +2,17 @@ class ProposalRequest {
   final String serviceId;
   final num price;
   final String message;
-  final String? estimatedDuration;
+  final String availableDate;
+  final String availableFrom;
+  final String availableTo;
 
   ProposalRequest({
     required this.serviceId,
     required this.price,
     required this.message,
-    this.estimatedDuration,
+    required this.availableDate,
+    required this.availableFrom,
+    required this.availableTo,
   });
 
   Map<String, dynamic> toJson() {
@@ -16,8 +20,9 @@ class ProposalRequest {
       'service_id': serviceId,
       'price': price,
       'message': message,
-      if (estimatedDuration != null && estimatedDuration!.isNotEmpty)
-        'estimated_duration': estimatedDuration,
+      'available_date': availableDate,
+      'available_from': availableFrom,
+      'available_to': availableTo,
     };
   }
 }

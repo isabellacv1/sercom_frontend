@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/api_client.dart';
 
@@ -89,6 +90,36 @@ class AuthService {
     print('REGISTER DATA: ${response.data}');
 
     return response.data;
+  }
+
+  Future<void> switchRole(String newRole) async {
+    try {
+      final data = {'active_role': newRole};
+      print('SWITCH ROLE PAYLOAD: ${jsonEncode(data)}');
+      await api.patch(
+        '/profiles/me/active-role',
+        data: data,
+      );
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('userRole', newRole);
+    } catch (e) {
+      print('ERROR IN SWITCH ROLE: $e');
+      throw Exception('No se pudo cambiar el rol: $e');
+    }
+  }
+
+  Future<void> activateWorkerProfile() async {
+    try {
+      final data = {'roles': ['client', 'worker']};
+      print('ACTIVATE WORKER PAYLOAD: ${jsonEncode(data)}');
+      await api.patch(
+        '/profiles/me/roles',
+        data: data,
+      );
+      await switchRole('technician'); // Cambiar el rol activo inmediatamente
+    } catch (e) {
+      throw Exception('Error al activar perfil: $e');
+    }
   }
 
   Future<void> logout() async {

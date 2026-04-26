@@ -313,8 +313,6 @@ class _MissionsPageState extends State<MissionsPage> {
                                           ),
                                         ),
                                         onPressed: () {
-                                          // aquí luego puedes navegar al detalle de la misión
-                                          // o a la pantalla de propuestas
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(
