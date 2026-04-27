@@ -12,6 +12,8 @@ class MissionService {
     required String address,
     int? minBudget,
     int? maxBudget,
+    double? latitude,
+    double? longitude,
   }) async {
     final response = await api.post(
       '/services',
@@ -23,6 +25,8 @@ class MissionService {
         'address': address,
         'budget_min': minBudget,
         'budget_max': maxBudget,
+        'latitude': latitude,
+        'longitude': longitude,
       },
     );
 

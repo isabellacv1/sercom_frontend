@@ -23,6 +23,9 @@ class _CreateMissionPageState extends State<CreateMissionPage> {
   double maxBudget = 80000;
   bool isSubmitting = false;
 
+  double? selectedLatitude;
+  double? selectedLongitude;
+
   CategoryModel? category;
   ServiceOptionModel? serviceOption;
 
@@ -83,6 +86,8 @@ class _CreateMissionPageState extends State<CreateMissionPage> {
         address: addressController.text.trim(),
         minBudget: minBudget.round(),
         maxBudget: maxBudget.round(),
+        latitude: selectedLatitude,
+        longitude: selectedLongitude,
       );
 
       if (!mounted) return;
@@ -147,6 +152,18 @@ class _CreateMissionPageState extends State<CreateMissionPage> {
 
   String formatPrice(double value) {
     return '\$${value.round()}';
+  }
+
+  Future<void> openMapPicker() async {
+    final result = await Navigator.pushNamed(context, '/map-picker');
+
+    if (result is Map<String, dynamic>) {
+      setState(() {
+        addressController.text = result['address'] ?? '';
+        selectedLatitude = result['latitude'];
+        selectedLongitude = result['longitude'];
+      });
+    }
   }
 
   @override
@@ -351,7 +368,7 @@ class _CreateMissionPageState extends State<CreateMissionPage> {
           child: TextFormField(
             controller: addressController,
             decoration: const InputDecoration(
-              hintText: 'Av. Siempre Viva 123',
+              hintText: 'Escribe la dirección manualmente',
               prefixIcon: Icon(Icons.location_on_outlined),
               border: InputBorder.none,
             ),
@@ -364,20 +381,35 @@ class _CreateMissionPageState extends State<CreateMissionPage> {
           ),
         ),
         const SizedBox(height: 16),
-        Container(
-          height: 180,
+        SizedBox(
           width: double.infinity,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            color: const Color(0xFFDFF1FF),
-            image: const DecorationImage(
-              image: NetworkImage(
-                'https://static.vecteezy.com/system/resources/previews/002/206/854/non_2x/city-map-with-gps-navigation-blue-marker-free-vector.jpg',
-              ),
-              fit: BoxFit.cover,
-            ),
+          height: 54,
+          child: OutlinedButton.icon(
+            onPressed: openMapPicker,
+            icon: const Icon(Icons.map_outlined),
+            label: const Text('Seleccionar ubicación en Google Maps'),
           ),
         ),
+        if (selectedLatitude != null && selectedLongitude != null) ...[
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Text(
+              'Ubicación seleccionada:\nLatitud: $selectedLatitude\nLongitud: $selectedLongitude',
+              style: const TextStyle(
+                color: Color(0xFF64748B),
+                fontSize: 13,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -387,7 +419,7 @@ class _CreateMissionPageState extends State<CreateMissionPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Presupuesto estimado (opcional)',
+          'Presupuesto estimado',
           style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w800,
