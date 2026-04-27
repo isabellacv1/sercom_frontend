@@ -11,6 +11,7 @@ import 'screens/missions_page.dart';
 import 'screens/match_confirmation_screen.dart';
 import 'screens/technician_profile_screen.dart';
 import 'screens/role_selection_page.dart';
+import 'screens/map_picker_page.dart';
 
 import 'models/technician.dart';
 
@@ -35,6 +36,7 @@ class MyApp extends StatelessWidget {
         '/create-mission': (context) => const CreateMissionPage(),
         '/mission-dispatch': (context) => const MissionDispatchPage(),
         '/missions': (context) => const MissionsPage(),
+        '/map-picker': (context) => const MapPickerPage(),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/register') {
