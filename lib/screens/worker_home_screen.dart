@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/postulation_form_sheet.dart';
 import '../services/mission_service.dart';
 import '../models/mission_model.dart';
@@ -19,12 +20,29 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
   final _missionService = MissionService();
   bool _isLoading = true;
   List<MissionModel> _missions = [];
+  Set<String> _postulatedMissions = {};
 
   @override
   void initState() {
     super.initState();
     _loadUser();
+    _loadPostulatedMissions();
     _loadMissions();
+  }
+
+  Future<void> _loadPostulatedMissions() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _postulatedMissions = (prefs.getStringList('postulatedMissions') ?? []).toSet();
+    });
+  }
+
+  Future<void> _markAsPostulated(String missionId) async {
+    setState(() {
+      _postulatedMissions.add(missionId);
+    });
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('postulatedMissions', _postulatedMissions.toList());
   }
 
   Future<void> _loadUser() async {
@@ -195,35 +213,65 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: ElevatedButton(
-              onPressed: () {
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  backgroundColor: Colors.transparent,
-                  builder: (context) => PostulationFormSheet(
-                    serviceId: mission.id,
+          _postulatedMissions.contains(mission.id)
+              ? Container(
+                  width: double.infinity,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9), // Light grey background
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
                   ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFF8A00),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  child: Center(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.check_circle, color: Color(0xFF10B981), size: 20), // Green check
+                        const SizedBox(width: 8),
+                        Text(
+                          'Postulado',
+                          style: GoogleFonts.montserrat(
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      final result = await showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (context) => PostulationFormSheet(
+                          serviceId: mission.id,
+                        ),
+                      );
+
+                      if (result == true) {
+                        _markAsPostulated(mission.id);
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFF8A00),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'Postularme',
+                      style: GoogleFonts.montserrat(
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-              child: Text(
-                'Postularme',
-                style: GoogleFonts.montserrat(
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
         ],
       ),
     );

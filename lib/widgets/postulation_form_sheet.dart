@@ -129,7 +129,7 @@ class _PostulationFormSheetState extends State<PostulationFormSheet> {
       
       if (!mounted) return;
       
-      Navigator.pop(context); // Close the BottomSheet
+      Navigator.pop(context, true); // Close the BottomSheet and return true
       
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -149,10 +149,17 @@ class _PostulationFormSheetState extends State<PostulationFormSheet> {
       );
     } catch (e) {
       if (!mounted) return;
+      
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+      
+      if (errorMsg.contains('Ya te has postulado')) {
+        Navigator.pop(context, true); // Close and return true to mark as postulated
+      }
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            e.toString().replaceAll('Exception: ', ''),
+            errorMsg,
             style: GoogleFonts.montserrat(),
           ),
           backgroundColor: const Color(0xFFEF4444), // Red error

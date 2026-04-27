@@ -59,26 +59,56 @@ class _CandidateListScreenState extends State<CandidateListScreen> {
   }
 
   Future<void> _acceptProposal(String proposalId) async {
+    setState(() {
+      _isLoadingAccept = true;
+      _processingProposalId = proposalId;
+    });
+
     try {
       await _proposalService.acceptProposal(proposalId);
 
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Propuesta aceptada correctamente')),
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle, color: Colors.white),
+              const SizedBox(width: 8),
+              const Text('¡Contratación procesada con éxito!'),
+            ],
+          ),
+          backgroundColor: const Color(0xFF10B981),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
 
+      // Refresh data
       setState(() {
         _loadProposals();
+        _isLoadingAccept = false;
+        _processingProposalId = null;
       });
     } catch (e) {
       if (!mounted) return;
 
+      setState(() {
+        _isLoadingAccept = false;
+        _processingProposalId = null;
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al aceptar propuesta: $e')),
+        SnackBar(
+          content: Text('No se pudo procesar la contratación: $e'),
+          backgroundColor: const Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     }
   }
+
+  bool _isLoadingAccept = false;
+  String? _processingProposalId;
 
   @override
   Widget build(BuildContext context) {
@@ -218,6 +248,7 @@ class _CandidateListScreenState extends State<CandidateListScreen> {
                         technician: technician,
                         proposal: proposal,
                         onAccept: _confirmAccept,
+                        isProcessing: _isLoadingAccept && _processingProposalId == proposal.id,
                       );
                     },
                   );
@@ -279,12 +310,14 @@ class TechnicianCard extends StatelessWidget {
   final Technician technician;
   final Proposal proposal;
   final Function(String) onAccept;
+  final bool isProcessing;
 
   const TechnicianCard({
     Key? key,
     required this.technician,
     required this.proposal,
     required this.onAccept,
+    this.isProcessing = false,
   }) : super(key: key);
 
   bool get isAccepted => proposal.status == 'accepted';
@@ -363,7 +396,7 @@ class TechnicianCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '\$${technician.proposedPrice.toInt()}',
+                    '\$${technician.proposedPrice.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}',
                     style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
@@ -430,25 +463,41 @@ class TechnicianCard extends StatelessWidget {
                         color: const Color(0xFF10B981),
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Text(
-                        'Aceptada',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.check, color: Colors.white, size: 16),
+                          SizedBox(width: 4),
+                          Text(
+                            'Aceptada',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
                       ),
                     )
                   else if (!isRejected)
                     ElevatedButton(
-                      onPressed: () => onAccept(proposal.id),
+                      onPressed: isProcessing ? null : () => onAccept(proposal.id),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF2563EB),
                         foregroundColor: Colors.white,
+                        elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
                         ),
                       ),
-                      child: const Text('Aceptar'),
+                      child: isProcessing
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text('Aceptar'),
                     ),
                 ],
               ),
