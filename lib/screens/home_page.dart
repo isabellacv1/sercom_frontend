@@ -25,6 +25,19 @@ class _HomePageState extends State<HomePage> {
   int _currentIndex = 0;
   final PageController _pageController = PageController();
 
+  String get userInitials {
+    final parts = userName
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .toList();
+
+    if (parts.isEmpty) return 'U';
+    if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
+    return '${parts.first.substring(0, 1)}${parts.last.substring(0, 1)}'
+        .toUpperCase();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -225,12 +238,17 @@ class _HomePageState extends State<HomePage> {
           width: 54,
           height: 54,
           decoration: BoxDecoration(
+            color: const Color(0xFFEFF6FF),
             borderRadius: BorderRadius.circular(27),
-            image: const DecorationImage(
-              image: NetworkImage(
-                'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300',
+          ),
+          child: Center(
+            child: Text(
+              userInitials,
+              style: const TextStyle(
+                color: Color(0xFF2563EB),
+                fontWeight: FontWeight.w800,
+                fontSize: 18,
               ),
-              fit: BoxFit.cover,
             ),
           ),
         ),

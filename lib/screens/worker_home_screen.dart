@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:intl/intl.dart';
 import 'package:shimmer/shimmer.dart';
+import '../core/display_formatters.dart';
 import '../widgets/postulation_form_sheet.dart';
 import '../services/mission_service.dart';
 import '../models/mission_model.dart';
@@ -427,7 +427,7 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
                   color: Color(0xFFFF7A20), size: 18),
               const SizedBox(width: 8),
               Text(
-                'Para hoy',
+                _formatSchedule(mission),
                 style: GoogleFonts.montserrat(
                   color: const Color(0xFF64748B),
                   fontSize: 14,
@@ -557,11 +557,18 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
 
   String _formatBudget(int? min, int? max) {
     if (min == null && max == null) return '';
-    final currencyFormat = NumberFormat.currency(locale: 'es_CO', symbol: '\$', decimalDigits: 0);
-    final fMin = min != null ? currencyFormat.format(min) : '';
-    final fMax = max != null ? currencyFormat.format(max) : '';
+    final fMin = min != null ? formatCurrencyCop(min) : '';
+    final fMax = max != null ? formatCurrencyCop(max) : '';
     if (fMin.isNotEmpty && fMax.isNotEmpty) return '$fMin - $fMax';
     return fMin.isNotEmpty ? fMin : fMax;
+  }
+
+  String _formatSchedule(MissionModel mission) {
+    return formatAvailabilityLabel(
+      date: mission.scheduledDate,
+      from: mission.scheduledFrom,
+      to: mission.scheduledTo,
+    );
   }
 
 

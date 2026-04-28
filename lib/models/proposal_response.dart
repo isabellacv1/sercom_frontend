@@ -1,3 +1,5 @@
+import '../core/display_formatters.dart';
+
 class ProposalResponse {
   final String id;
   final String serviceId;
@@ -26,18 +28,28 @@ class ProposalResponse {
   });
 
   factory ProposalResponse.fromJson(Map<String, dynamic> json) {
+    final workerJson = (json['worker'] ?? json['technician'])
+        as Map<String, dynamic>?;
+
     return ProposalResponse(
-      id: json['id'] ?? '',
-      serviceId: json['serviceId'] ?? '',
-      technicianId: json['technicianId'] ?? '',
-      price: json['price'] ?? 0,
-      message: json['message'] ?? '',
-      status: json['status'] ?? 'pending',
-      availableDate: json['availableDate'] ?? '',
-      availableFrom: json['availableFrom'] ?? '',
-      availableTo: json['availableTo'] ?? '',
-      createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
-      worker: json['worker'] != null ? WorkerInfo.fromJson(json['worker']) : null,
+      id: readStringValue(json, ['id']) ?? '',
+      serviceId: readStringValue(json, ['serviceId', 'service_id']) ?? '',
+      technicianId: readStringValue(
+            json,
+            ['technicianId', 'technician_id', 'workerId', 'worker_id'],
+          ) ??
+          '',
+      price: num.tryParse(readValue(json, ['price'])?.toString() ?? '0') ?? 0,
+      message: readStringValue(json, ['message', 'description']) ?? '',
+      status: readStringValue(json, ['status']) ?? 'pending',
+      availableDate: readStringValue(json, ['availableDate', 'available_date']) ?? '',
+      availableFrom: readStringValue(json, ['availableFrom', 'available_from']) ?? '',
+      availableTo: readStringValue(json, ['availableTo', 'available_to']) ?? '',
+      createdAt: DateTime.tryParse(
+            readStringValue(json, ['createdAt', 'created_at']) ?? '',
+          ) ??
+          DateTime.now(),
+      worker: workerJson != null ? WorkerInfo.fromJson(workerJson) : null,
     );
   }
 }
@@ -59,11 +71,15 @@ class WorkerInfo {
 
   factory WorkerInfo.fromJson(Map<String, dynamic> json) {
     return WorkerInfo(
-      id: json['id'] ?? '',
-      name: json['name'] ?? '',
-      rating: json['rating'] ?? 0,
-      ratingCount: json['ratingCount'] ?? 0,
-      profileImageUrl: json['profileImageUrl'] ?? '',
+      id: readStringValue(json, ['id']) ?? '',
+      name: readStringValue(json, ['fullName', 'full_name', 'name']) ?? '',
+      rating: readDoubleValue(json, ['rating', 'ratingAvg', 'rating_avg']) ?? 0,
+      ratingCount: readIntValue(json, ['ratingCount', 'rating_count']) ?? 0,
+      profileImageUrl: readStringValue(
+            json,
+            ['profileImageUrl', 'profile_image_url', 'avatarUrl', 'avatar_url'],
+          ) ??
+          '',
     );
   }
 }

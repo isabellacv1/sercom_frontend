@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
 import 'package:shimmer/shimmer.dart';
+import '../core/display_formatters.dart';
 import '../services/proposal_service.dart';
 
 class PostulationsScreen extends StatefulWidget {
@@ -274,13 +274,40 @@ class _PostulationsScreenState extends State<PostulationsScreen>
 
   // ─── PROPOSAL CARD ─────────────────────────────────────────────────────────
   Widget _proposalCard(Map<String, dynamic> p, String status) {
-    final createdAtRelative = p['created_at_relative'] as String? ?? '';
-    final categoryName = p['category_name'] as String?;
-    final serviceTitle = p['service_title'] as String?;
-    final description = p['description'] as String?;
-    final priceMin = p['price_min'];
-    final priceMax = p['price_max'];
+    final createdAtRelative = readStringValue(
+          p,
+          ['created_at_relative', 'createdAtRelative'],
+        ) ??
+        '';
+    final categoryName = readStringValue(p, ['category_name', 'categoryName']);
+    final serviceTitle = readStringValue(p, ['service_title', 'serviceTitle', 'title']);
+    final description = readStringValue(p, ['description']);
+    final priceMin = readValue(p, ['price_min', 'priceMin', 'min_budget', 'budget_min']);
+    final priceMax = readValue(p, ['price_max', 'priceMax', 'max_budget', 'budget_max']);
     final isAccepted = status == 'accepted';
+    final scheduleText = formatAvailabilityLabel(
+      date: readStringValue(
+        p,
+        [
+          'scheduled_date',
+          'scheduledDate',
+          'available_date',
+          'availableDate',
+          'service_date',
+          'serviceDate',
+          'requested_date',
+          'requestedDate',
+        ],
+      ),
+      from: readStringValue(
+        p,
+        ['scheduled_from', 'scheduledFrom', 'available_from', 'availableFrom'],
+      ),
+      to: readStringValue(
+        p,
+        ['scheduled_to', 'scheduledTo', 'available_to', 'availableTo'],
+      ),
+    );
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -411,7 +438,7 @@ class _PostulationsScreenState extends State<PostulationsScreen>
               const Icon(Icons.calendar_today_outlined, color: Color(0xFFFF7A20), size: 18),
               const SizedBox(width: 8),
               Text(
-                'Para hoy',
+                scheduleText,
                 style: GoogleFonts.montserrat(
                   color: const Color(0xFF64748B),
                   fontSize: 14,
@@ -481,9 +508,8 @@ class _PostulationsScreenState extends State<PostulationsScreen>
     final iMin = min is int ? min : (min is num ? min.toInt() : null);
     final iMax = max is int ? max : (max is num ? max.toInt() : null);
     if (iMin == null && iMax == null) return '';
-    final currencyFormat = NumberFormat.currency(locale: 'es_CO', symbol: '\$', decimalDigits: 0);
-    final fMin = iMin != null ? currencyFormat.format(iMin) : '';
-    final fMax = iMax != null ? currencyFormat.format(iMax) : '';
+    final fMin = iMin != null ? formatCurrencyCop(iMin) : '';
+    final fMax = iMax != null ? formatCurrencyCop(iMax) : '';
     if (fMin.isNotEmpty && fMax.isNotEmpty) return '$fMin - $fMax';
     return fMin.isNotEmpty ? fMin : fMax;
   }

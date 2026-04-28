@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/display_formatters.dart';
 import '../models/technician.dart';
 import '../models/mission_model.dart';
 import '../models/proposal.dart';
@@ -21,7 +22,7 @@ class CandidateListScreen extends StatefulWidget {
 
 class _CandidateListScreenState extends State<CandidateListScreen> {
   int _selectedFilter = 0;
-  final List<String> _filters = ['Todos', 'Recomendados', 'Cerca de mí'];
+  final List<String> _filters = ['Todos', 'Mejor valorados', 'Con ubicación'];
   final ProposalService _proposalService = ProposalService();
   late Future<List<Proposal>> _proposalsFuture;
 
@@ -110,6 +111,31 @@ class _CandidateListScreenState extends State<CandidateListScreen> {
   bool _isLoadingAccept = false;
   String? _processingProposalId;
 
+  List<Proposal> _visibleProposals(List<Proposal> proposals) {
+    final visible = List<Proposal>.from(proposals);
+
+    if (_selectedFilter == 1) {
+      visible.sort((a, b) {
+        final aRating = a.profile?.ratingAvg ?? 0;
+        final bRating = b.profile?.ratingAvg ?? 0;
+        return bRating.compareTo(aRating);
+      });
+    }
+
+    if (_selectedFilter == 2) {
+      return visible
+          .where((proposal) => proposal.profile?.city.trim().isNotEmpty == true)
+          .toList();
+    }
+
+    return visible;
+  }
+
+  String _proposalCountLabel(int count) {
+    if (count == 1) return '1 propuesta recibida';
+    return '$count propuestas recibidas';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -151,7 +177,9 @@ class _CandidateListScreenState extends State<CandidateListScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    widget.mission.serviceTitle ?? 'Instalación de luminarias',
+                    widget.mission.serviceTitle?.trim().isNotEmpty == true
+                        ? widget.mission.serviceTitle!.trim()
+                        : 'Servicio sin título',
                     style: const TextStyle(
                       color: Color(0xFF0F172A),
                       fontSize: 18,
@@ -166,7 +194,7 @@ class _CandidateListScreenState extends State<CandidateListScreen> {
                       Text(
                         widget.mission.address.isNotEmpty
                             ? widget.mission.address
-                            : 'Av. Siempre Viva 123',
+                            : 'Dirección no disponible',
                         style: const TextStyle(
                           color: Color(0xFF64748B),
                           fontSize: 14,
@@ -235,22 +263,59 @@ class _CandidateListScreenState extends State<CandidateListScreen> {
                     );
                   }
 
-                  final proposals = snapshot.data!;
+                  final allProposals = snapshot.data!;
+                  final proposals = _visibleProposals(allProposals);
 
-                  return ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    itemCount: proposals.length,
-                    itemBuilder: (context, index) {
-                      final proposal = proposals[index];
-                      final technician = Technician.fromProposal(proposal);
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                        child: Text(
+                          _proposalCountLabel(allProposals.length),
+                          style: const TextStyle(
+                            color: Color(0xFF64748B),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      if (proposals.isEmpty)
+                        const Expanded(
+                          child: Center(
+                            child: Text(
+                              'No hay propuestas para este filtro',
+                              style: TextStyle(
+                                color: Color(0xFF64748B),
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        Expanded(
+                          child: ListView.builder(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 8,
+                            ),
+                            itemCount: proposals.length,
+                            itemBuilder: (context, index) {
+                              final proposal = proposals[index];
+                              final technician =
+                                  Technician.fromProposal(proposal);
 
-                      return TechnicianCard(
-                        technician: technician,
-                        proposal: proposal,
-                        onAccept: _confirmAccept,
-                        isProcessing: _isLoadingAccept && _processingProposalId == proposal.id,
-                      );
-                    },
+                              return TechnicianCard(
+                                technician: technician,
+                                proposal: proposal,
+                                onAccept: _confirmAccept,
+                                isProcessing: _isLoadingAccept &&
+                                    _processingProposalId == proposal.id,
+                              );
+                            },
+                          ),
+                        ),
+                    ],
                   );
                 },
               ),
@@ -396,7 +461,7 @@ class TechnicianCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '\$${technician.proposedPrice.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}',
+                    formatCurrencyCop(technician.proposedPrice),
                     style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w800,

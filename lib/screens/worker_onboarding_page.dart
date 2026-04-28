@@ -83,7 +83,7 @@ class _WorkerOnboardingPageState extends State<WorkerOnboardingPage> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Únete a la comunidad de TaskRank, completa misiones y genera ingresos con tus habilidades.',
+              'Únete a la comunidad de Sercom, completa misiones y genera ingresos con tus habilidades.',
               style: GoogleFonts.montserrat(
                 fontSize: 15,
                 color: Colors.grey.shade600,

@@ -84,15 +84,12 @@ class _CategoryServicesPageState extends State<CategoryServicesPage> {
     return colors[index % colors.length];
   }
 
-  String _getRecommendedSpecialist(String title) {
-    final t = title.toLowerCase();
-    if (t.contains('tablero') || t.contains('breaker')) {
-      return 'Recomendado: Especialista Categoría III';
+  String? _getRecommendedSpecialist(ServiceOptionModel service) {
+    final level = service.specialistLevel?.trim();
+    if (level != null && level.isNotEmpty) {
+      return 'Recomendado: $level';
     }
-    if (t.contains('luminaria') || t.contains('domot')) {
-      return 'Recomendado: Especialista Categoría II';
-    }
-    return 'Recomendado: Especialista Categoría I';
+    return null;
   }
 
   @override
@@ -198,6 +195,8 @@ class _CategoryServicesPageState extends State<CategoryServicesPage> {
                               ...List.generate(filteredServices.length, (index) {
                                 final service = filteredServices[index];
                                 final color = _getServiceColor(index);
+                                final recommendation =
+                                    _getRecommendedSpecialist(service);
 
                                 return Padding(
                                   padding: const EdgeInsets.only(bottom: 18),
@@ -275,8 +274,10 @@ class _CategoryServicesPageState extends State<CategoryServicesPage> {
                                               ),
                                             ],
                                           ),
-                                          const SizedBox(height: 16),
-                                          Container(
+                                          if (recommendation != null)
+                                            const SizedBox(height: 16),
+                                          if (recommendation != null)
+                                            Container(
                                             width: double.infinity,
                                             padding: const EdgeInsets.symmetric(
                                               horizontal: 14,
@@ -299,9 +300,7 @@ class _CategoryServicesPageState extends State<CategoryServicesPage> {
                                                 const SizedBox(width: 8),
                                                 Expanded(
                                                   child: Text(
-                                                    _getRecommendedSpecialist(
-                                                      service.title,
-                                                    ),
+                                                    recommendation!,
                                                     style: const TextStyle(
                                                       color: Color(0xFF2563EB),
                                                       fontWeight: FontWeight.w700,

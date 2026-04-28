@@ -1,3 +1,5 @@
+import '../core/display_formatters.dart';
+
 class Proposal {
   final String id;
   final String serviceId;
@@ -28,39 +30,47 @@ class Proposal {
   });
 
   factory Proposal.fromJson(Map<String, dynamic> json) {
-    final worker = json['worker'] as Map<String, dynamic>?;
+    final worker = (json['worker'] ?? json['technician'])
+        as Map<String, dynamic>?;
 
     return Proposal(
-      id: json['id']?.toString() ?? '',
-      serviceId: json['serviceId']?.toString() ?? '',
-      technicianId: worker?['id']?.toString() ?? '',
-      price: num.tryParse(json['price']?.toString() ?? '0') ?? 0,
-      message: json['description']?.toString() ?? '',
-      estimatedDuration: json['estimatedTime']?.toString(),
-      status: json['status']?.toString() ?? 'pending',
-      availableDate: json['availableDate']?.toString(),
-      availableFrom: json['availableFrom']?.toString(),
-      availableTo: json['availableTo']?.toString(),
+      id: readStringValue(json, ['id']) ?? '',
+      serviceId: readStringValue(json, ['serviceId', 'service_id']) ?? '',
+      technicianId: worker != null
+          ? readStringValue(worker, ['id']) ?? ''
+          : readStringValue(
+                json,
+                ['technicianId', 'technician_id', 'workerId', 'worker_id'],
+              ) ??
+              '',
+      price: num.tryParse(readValue(json, ['price'])?.toString() ?? '0') ?? 0,
+      message: readStringValue(json, ['description', 'message']) ?? '',
+      estimatedDuration: readStringValue(
+        json,
+        ['estimatedTime', 'estimated_time', 'estimatedDuration', 'estimated_duration'],
+      ),
+      status: readStringValue(json, ['status']) ?? 'pending',
+      availableDate: readStringValue(json, ['availableDate', 'available_date']),
+      availableFrom: readStringValue(json, ['availableFrom', 'available_from']),
+      availableTo: readStringValue(json, ['availableTo', 'available_to']),
       profile: worker != null ? Profile.fromJson(worker) : null,
     );
   }
 
   String get formattedTimeRange {
-    if (availableFrom != null && availableTo != null) {
-      String from = _formatTime(availableFrom!);
-      String to = _formatTime(availableTo!);
-      return '$from - $to';
-    }
+    final availability = formatAvailabilityLabel(
+      from: availableFrom,
+      to: availableTo,
+      fallback: '',
+    );
+
+    if (availability.isNotEmpty) return availability;
 
     if (estimatedDuration != null && estimatedDuration!.isNotEmpty) {
       return estimatedDuration!;
     }
 
     return 'Tiempo no especificado';
-  }
-
-  String _formatTime(String time) {
-    return time.length >= 5 ? time.substring(0, 5) : time;
   }
 }
 
@@ -70,6 +80,12 @@ class Profile {
   final double ratingAvg;
   final int ratingCount;
   final String city;
+  final String? specialty;
+  final String? specialistLevel;
+  final int? completedMissions;
+  final double? yearsExperience;
+  final List<String> skills;
+  final List<String> portfolioUrls;
 
   Profile({
     required this.fullName,
@@ -77,24 +93,53 @@ class Profile {
     required this.ratingAvg,
     required this.ratingCount,
     required this.city,
+    this.specialty,
+    this.specialistLevel,
+    this.completedMissions,
+    this.yearsExperience,
+    this.skills = const [],
+    this.portfolioUrls = const [],
   });
 
   factory Profile.fromJson(Map<String, dynamic> json) {
-    final name = json['name']?.toString() ?? 'Técnico';
+    final name = readStringValue(json, ['fullName', 'full_name', 'name']) ??
+        'Técnico';
 
     return Profile(
       fullName: name,
 
-      avatarUrl: json['profileImageUrl']?.toString() ??
-          'https://ui-avatars.com/api/?name=$name&background=2563EB&color=fff',
+      avatarUrl: readStringValue(
+            json,
+            ['profileImageUrl', 'profile_image_url', 'avatarUrl', 'avatar_url'],
+          ) ??
+          'https://ui-avatars.com/api/?name=${Uri.encodeComponent(name)}&background=2563EB&color=fff',
 
       ratingAvg:
-          double.tryParse(json['rating']?.toString() ?? '0') ?? 0,
+          readDoubleValue(json, ['rating', 'ratingAvg', 'rating_avg']) ?? 0,
 
       ratingCount:
-          int.tryParse(json['ratingCount']?.toString() ?? '0') ?? 0,
+          readIntValue(json, ['ratingCount', 'rating_count', 'reviewsCount']) ??
+              0,
 
-      city: json['city']?.toString() ?? '',
+      city: readStringValue(json, ['city', 'location']) ?? '',
+      specialty: readStringValue(json, ['specialty', 'speciality', 'title']),
+      specialistLevel: readStringValue(
+        json,
+        ['specialistLevel', 'specialist_level', 'categoryLevel', 'category_level'],
+      ),
+      completedMissions: readIntValue(
+        json,
+        ['completedMissions', 'completed_missions', 'totalMissions', 'total_missions'],
+      ),
+      yearsExperience: readDoubleValue(
+        json,
+        ['yearsExperience', 'years_experience', 'experienceYears', 'experience_years'],
+      ),
+      skills: readStringListValue(json, ['skills', 'tags']),
+      portfolioUrls: readStringListValue(
+        json,
+        ['portfolioUrls', 'portfolio_urls', 'portfolio'],
+      ),
     );
   }
 }

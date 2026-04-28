@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/display_formatters.dart';
 import '../models/technician.dart';
 import 'match_confirmation_screen.dart';
 
@@ -43,10 +44,10 @@ class TechnicianProfileScreen extends StatelessWidget {
                     const SizedBox(height: 32),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: const [
+                      children: [
                         Text(
-                          'Sobre Carlos',
-                          style: TextStyle(
+                          'Sobre ${technician.name}',
+                          style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
                             color: Color(0xFF0F172A),
@@ -54,7 +55,7 @@ class TechnicianProfileScreen extends StatelessWidget {
                         ),
                         Text(
                           'Leer más',
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: Color(0xFF2563EB),
                             fontWeight: FontWeight.w600,
                           ),
@@ -124,7 +125,7 @@ class TechnicianProfileScreen extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                'Especialista Eléctrico • ${technician.tags.first}',
+                _profileSubtitle(),
                 style: const TextStyle(
                   fontSize: 14,
                   color: Color(0xFF64748B),
@@ -134,73 +135,25 @@ class TechnicianProfileScreen extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _buildStatColumn('${technician.rating}', '⭐⭐⭐⭐⭐', true),
-                  Container(width: 1, height: 40, color: const Color(0xFFE5E7EB)),
-                  _buildStatColumn('${technician.totalMissions}', 'Misiones', false),
-                  Container(width: 1, height: 40, color: const Color(0xFFE5E7EB)),
-                  _buildStatColumn('${technician.yearsExperience}', 'Años Exp.', false),
-                ],
-              ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEFF6FF),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.verified, color: Color(0xFF2563EB), size: 14),
-                        SizedBox(width: 4),
-                        Text(
-                          'Maestro de Redes',
-                          style: TextStyle(color: Color(0xFF2563EB), fontSize: 12, fontWeight: FontWeight.w700),
-                        ),
-                      ],
-                    ),
+                  _buildStatColumn(
+                    technician.rating > 0
+                        ? technician.rating.toStringAsFixed(1)
+                        : '-',
+                    'Rating',
                   ),
-                  const SizedBox(width: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF1E8),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.local_fire_department, color: Color(0xFFF97316), size: 14),
-                        SizedBox(width: 4),
-                        Text(
-                          'Racha de 10',
-                          style: TextStyle(color: Color(0xFFF97316), fontSize: 12, fontWeight: FontWeight.w700),
-                        ),
-                      ],
-                    ),
+                  Container(width: 1, height: 40, color: const Color(0xFFE5E7EB)),
+                  _buildStatColumn(
+                    technician.totalMissions?.toString() ?? '-',
+                    'Misiones',
+                  ),
+                  Container(width: 1, height: 40, color: const Color(0xFFE5E7EB)),
+                  _buildStatColumn(
+                    _formatYears(technician.yearsExperience),
+                    'Años Exp.',
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFECFDF5),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.check_circle, color: Color(0xFF10B981), size: 14),
-                    SizedBox(width: 4),
-                    Text(
-                      'Puntual',
-                      style: TextStyle(color: Color(0xFF10B981), fontSize: 12, fontWeight: FontWeight.w700),
-                    ),
-                  ],
-                ),
-              ),
+              _buildTags(),
             ],
           ),
         ),
@@ -241,7 +194,58 @@ class TechnicianProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatColumn(String val, String label, bool isRating) {
+  String _profileSubtitle() {
+    final parts = <String>[
+      if (technician.title.trim().isNotEmpty) technician.title.trim(),
+      if (technician.tags.isNotEmpty) technician.tags.first,
+    ];
+
+    return parts.isEmpty ? 'Profesional de Sercom' : parts.join(' • ');
+  }
+
+  String _formatYears(double? value) {
+    if (value == null || value <= 0) return '-';
+    return value % 1 == 0 ? value.toInt().toString() : value.toStringAsFixed(1);
+  }
+
+  Widget _buildTags() {
+    if (technician.tags.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 24),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 10,
+        runSpacing: 10,
+        children: technician.tags.take(4).map((tag) {
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF6FF),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.verified, color: Color(0xFF2563EB), size: 14),
+                const SizedBox(width: 4),
+                Text(
+                  tag,
+                  style: const TextStyle(
+                    color: Color(0xFF2563EB),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildStatColumn(String val, String label) {
     return Column(
       children: [
         Text(
@@ -253,18 +257,13 @@ class TechnicianProfileScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 4),
-        isRating
-            ? Text(
-                label,
-                style: const TextStyle(fontSize: 10, letterSpacing: 2),
-              )
-            : Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Color(0xFF64748B),
-                ),
-              ),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            color: Color(0xFF64748B),
+          ),
+        ),
       ],
     );
   }
@@ -310,7 +309,7 @@ class TechnicianProfileScreen extends StatelessWidget {
                 style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
               ),
               Text(
-                '\$${technician.proposedPrice.toStringAsFixed(2)}',
+                formatCurrencyCop(technician.proposedPrice),
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w800,

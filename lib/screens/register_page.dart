@@ -209,7 +209,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                       const SizedBox(width: 10),
                       Text(
-                        'TaskRank',
+                        'Sercom',
                         style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w800,

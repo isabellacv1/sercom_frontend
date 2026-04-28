@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/display_formatters.dart';
 import '../models/technician.dart';
 
 class MatchConfirmationScreen extends StatelessWidget {
@@ -146,14 +147,18 @@ class MatchConfirmationScreen extends StatelessWidget {
                         const SizedBox(width: 16),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
-                            Text(
+                          children: [
+                            const Text(
                               'Fecha y Hora',
                               style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
                             ),
-                            SizedBox(height: 2),
+                            const SizedBox(height: 2),
                             Text(
-                              'Hoy, 4:30 PM',
+                              formatAvailabilityLabel(
+                                date: technician.availableDate,
+                                from: technician.availableFrom,
+                                to: technician.availableTo,
+                              ),
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
@@ -187,7 +192,7 @@ class MatchConfirmationScreen extends StatelessWidget {
                             Row(
                               children: [
                                 Text(
-                                  '\$${technician.proposedPrice.toStringAsFixed(2)}',
+                                  formatCurrencyCop(technician.proposedPrice),
                                   style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w800,
@@ -272,9 +277,9 @@ class MatchConfirmationScreen extends StatelessWidget {
               const SizedBox(height: 16),
               TextButton(
                 onPressed: () {},
-                child: const Text(
-                  'Contactar a Carlos',
-                  style: TextStyle(
+                child: Text(
+                  'Contactar a ${technician.name}',
+                  style: const TextStyle(
                     color: Color(0xFF64748B),
                     fontWeight: FontWeight.w600,
                     fontSize: 16,

@@ -1,3 +1,5 @@
+import '../core/display_formatters.dart';
+
 class CategoryModel {
   final String id;
   final String name;
@@ -11,9 +13,9 @@ class CategoryModel {
 
   factory CategoryModel.fromJson(Map<String, dynamic> json) {
     return CategoryModel(
-      id: json['id'].toString(),
-      name: json['name'] ?? '',
-      icon: json['icon'],
+      id: readStringValue(json, ['id']) ?? '',
+      name: readStringValue(json, ['name', 'title']) ?? '',
+      icon: readStringValue(json, ['icon']),
     );
   }
 }

@@ -1,3 +1,5 @@
+import '../core/display_formatters.dart';
+
 class ServiceOptionModel {
   final String id;
   final String categoryId;
@@ -15,11 +17,14 @@ class ServiceOptionModel {
 
   factory ServiceOptionModel.fromJson(Map<String, dynamic> json) {
     return ServiceOptionModel(
-      id: json['id'].toString(),
-      categoryId: json['category_id'].toString(),
-      title: json['title'] ?? '',
-      description: json['description'] ?? '',
-      specialistLevel: json['specialist_level'],
+      id: readStringValue(json, ['id']) ?? '',
+      categoryId: readStringValue(json, ['category_id', 'categoryId']) ?? '',
+      title: readStringValue(json, ['title', 'name']) ?? '',
+      description: readStringValue(json, ['description']) ?? '',
+      specialistLevel: readStringValue(
+        json,
+        ['specialist_level', 'specialistLevel', 'recommended_specialist'],
+      ),
     );
   }
 }

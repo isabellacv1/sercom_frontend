@@ -154,7 +154,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       SizedBox(width: 10),
                       Text(
-                        'TaskRank',
+                        'Sercom',
                         style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w800,
@@ -177,7 +177,7 @@ class _LoginPageState extends State<LoginPage> {
               ),
               const SizedBox(height: 22),
               const Text(
-                'Inicia sesión para continuar en TaskRank.',
+                'Inicia sesión para continuar en Sercom.',
                 style: TextStyle(
                   fontSize: 16,
                   height: 1.5,

@@ -63,7 +63,7 @@ class RoleSelectionPage extends StatelessWidget {
                       ),
                       SizedBox(width: 10),
                       Text(
-                        'TaskRank',
+                        'Sercom',
                         style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w800,
@@ -96,7 +96,7 @@ class RoleSelectionPage extends StatelessWidget {
                   children: [
                     TextSpan(text: 'Elige cómo quieres usar '),
                     TextSpan(
-                      text: 'TaskRank',
+                      text: 'Sercom',
                       style: TextStyle(
                         color: primaryColor,
                         fontWeight: FontWeight.w800,

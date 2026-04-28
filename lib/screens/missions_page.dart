@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/display_formatters.dart';
 import '../models/mission_model.dart';
 import '../services/mission_service.dart';
 import 'candidate_list_screen.dart';
@@ -26,6 +27,7 @@ class _MissionsPageState extends State<MissionsPage> {
   Future<void> loadMissions() async {
     try {
       final result = await _missionService.getMyMissions();
+
       if (!mounted) return;
 
       setState(() {
@@ -36,8 +38,13 @@ class _MissionsPageState extends State<MissionsPage> {
       if (!mounted) return;
 
       setState(() {
+        missions = [];
         isLoading = false;
       });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error cargando misiones: $e')),
+      );
     }
   }
 
@@ -47,14 +54,20 @@ class _MissionsPageState extends State<MissionsPage> {
         return 'Buscando trabajadores';
       case 'receiving_offers':
         return 'Recibiendo postulaciones';
+      case 'assigned':
+        return 'En curso';
       case 'confirmed':
         return 'Confirmada';
       case 'in_progress':
         return 'En curso';
       case 'finished':
         return 'Finalizada';
+      case 'completed':
+        return 'Finalizada';
+      case 'cancelled':
+        return 'Cancelada';
       default:
-        return status;
+        return status.isEmpty ? 'Sin estado' : status;
     }
   }
 
@@ -64,12 +77,16 @@ class _MissionsPageState extends State<MissionsPage> {
         return const Color(0xFFEAB308);
       case 'receiving_offers':
         return const Color(0xFF2563EB);
-      case 'confirmed':
-        return const Color(0xFF22C55E);
+      case 'assigned':
       case 'in_progress':
         return const Color(0xFF6366F1);
+      case 'confirmed':
+        return const Color(0xFF22C55E);
       case 'finished':
+      case 'completed':
         return const Color(0xFF64748B);
+      case 'cancelled':
+        return const Color(0xFFEF4444);
       default:
         return const Color(0xFF2563EB);
     }
@@ -78,32 +95,65 @@ class _MissionsPageState extends State<MissionsPage> {
   List<MissionModel> get filteredMissions {
     if (selectedTab == 0) {
       return missions
-          .where((m) => m.status != 'finished' && m.status != 'in_progress')
+          .where(
+            (m) =>
+                m.status != 'finished' &&
+                m.status != 'completed' &&
+                m.status != 'in_progress' &&
+                m.status != 'assigned',
+          )
           .toList();
     }
+
     if (selectedTab == 1) {
-      return missions.where((m) => m.status == 'in_progress').toList();
+      return missions
+          .where((m) => m.status == 'in_progress' || m.status == 'assigned')
+          .toList();
     }
-    return missions.where((m) => m.status == 'finished').toList();
+
+    return missions
+        .where((m) => m.status == 'finished' || m.status == 'completed')
+        .toList();
   }
 
   String getBudgetText(MissionModel mission) {
-    final min = mission.minBudget ?? 0;
-    final max = mission.maxBudget ?? 0;
+    final min = mission.priceMin ?? mission.minBudget;
+    final max = mission.priceMax ?? mission.maxBudget;
 
-    if (min > 0 && max > 0) {
-      return '\$$min - \$$max';
+    if (min != null && min > 0 && max != null && max > 0) {
+      return '${formatCurrencyCop(min)} - ${formatCurrencyCop(max)}';
     }
 
-    if (min > 0) {
-      return '\$$min';
-    }
-
-    if (max > 0) {
-      return '\$$max';
-    }
+    if (min != null && min > 0) return formatCurrencyCop(min);
+    if (max != null && max > 0) return formatCurrencyCop(max);
 
     return 'A convenir';
+  }
+
+  String getScheduleText(MissionModel mission) {
+    final date = mission.scheduledDate ?? mission.scheduledAt;
+
+    return formatAvailabilityLabel(
+      date: date,
+      from: mission.scheduledFrom,
+      to: mission.scheduledTo,
+    );
+  }
+
+  String getProposalButtonText(MissionModel mission) {
+    if (mission.status == 'assigned' || mission.status == 'in_progress') {
+      return 'Ver detalle';
+    }
+
+    final count = mission.offerCount;
+    if (count == null) return 'Ver propuestas';
+    return 'Ver propuestas ($count)';
+  }
+
+  String getEmptyMessage() {
+    if (selectedTab == 0) return 'No tienes misiones activas';
+    if (selectedTab == 1) return 'No tienes misiones en curso';
+    return 'No tienes misiones finalizadas';
   }
 
   @override
@@ -120,10 +170,10 @@ class _MissionsPageState extends State<MissionsPage> {
                 children: [
                   Row(
                     children: [
-                      Expanded(
+                      const Expanded(
                         child: Text(
                           'Mis Misiones',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.w800,
                             color: Color(0xFF0F172A),
@@ -169,10 +219,10 @@ class _MissionsPageState extends State<MissionsPage> {
               child: isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : filteredMissions.isEmpty
-                      ? const Center(
+                      ? Center(
                           child: Text(
-                            'No tienes misiones publicadas',
-                            style: TextStyle(fontSize: 16),
+                            getEmptyMessage(),
+                            style: const TextStyle(fontSize: 16),
                           ),
                         )
                       : RefreshIndicator(
@@ -203,11 +253,7 @@ class _MissionsPageState extends State<MissionsPage> {
                                   children: [
                                     Row(
                                       children: [
-                                        Icon(
-                                          Icons.circle,
-                                          size: 12,
-                                          color: color,
-                                        ),
+                                        Icon(Icons.circle, size: 12, color: color),
                                         const SizedBox(width: 8),
                                         Expanded(
                                           child: Text(
@@ -219,13 +265,15 @@ class _MissionsPageState extends State<MissionsPage> {
                                             ),
                                           ),
                                         ),
-                                        const Text(
-                                          'Hace 2 horas',
-                                          style: TextStyle(
-                                            color: Color(0xFF64748B),
-                                            fontSize: 14,
+                                        if (mission.createdAtRelative != null &&
+                                            mission.createdAtRelative!.isNotEmpty)
+                                          Text(
+                                            mission.createdAtRelative!,
+                                            style: const TextStyle(
+                                              color: Color(0xFF64748B),
+                                              fontSize: 14,
+                                            ),
                                           ),
-                                        ),
                                       ],
                                     ),
                                     const SizedBox(height: 10),
@@ -312,20 +360,24 @@ class _MissionsPageState extends State<MissionsPage> {
                                             borderRadius: BorderRadius.circular(18),
                                           ),
                                         ),
-                                        onPressed: () {
-                                          Navigator.push(
+                                        onPressed: () async {
+                                          await Navigator.push(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (context) => CandidateListScreen(
+                                              builder: (context) =>
+                                                  CandidateListScreen(
                                                 serviceId: mission.id,
                                                 mission: mission,
                                               ),
                                             ),
                                           );
+
+                                          if (!mounted) return;
+                                          loadMissions();
                                         },
-                                        child: const Text(
-                                          'Ver propuestas',
-                                          style: TextStyle(
+                                        child: Text(
+                                          getProposalButtonText(mission),
+                                          style: const TextStyle(
                                             fontSize: 17,
                                             fontWeight: FontWeight.w700,
                                           ),
@@ -367,9 +419,8 @@ class _MissionsPageState extends State<MissionsPage> {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-              color: selected
-                  ? const Color(0xFF0F172A)
-                  : const Color(0xFF64748B),
+              color:
+                  selected ? const Color(0xFF0F172A) : const Color(0xFF64748B),
             ),
           ),
         ),
