@@ -28,10 +28,12 @@ class Proposal {
   });
 
   factory Proposal.fromJson(Map<String, dynamic> json) {
+    final worker = json['worker'] as Map<String, dynamic>?;
+
     return Proposal(
       id: json['id']?.toString() ?? '',
       serviceId: json['serviceId']?.toString() ?? '',
-      technicianId: json['worker']?['id']?.toString() ?? '',
+      technicianId: worker?['id']?.toString() ?? '',
       price: num.tryParse(json['price']?.toString() ?? '0') ?? 0,
       message: json['description']?.toString() ?? '',
       estimatedDuration: json['estimatedTime']?.toString(),
@@ -39,9 +41,7 @@ class Proposal {
       availableDate: json['availableDate']?.toString(),
       availableFrom: json['availableFrom']?.toString(),
       availableTo: json['availableTo']?.toString(),
-      profile: json['worker'] != null
-          ? Profile.fromJson(json['worker'])
-          : null,
+      profile: worker != null ? Profile.fromJson(worker) : null,
     );
   }
 
@@ -80,15 +80,21 @@ class Profile {
   });
 
   factory Profile.fromJson(Map<String, dynamic> json) {
+    final name = json['name']?.toString() ?? 'Técnico';
+
     return Profile(
-      fullName: json['name']?.toString() ?? 'Técnico',
+      fullName: name,
+
       avatarUrl: json['profileImageUrl']?.toString() ??
-          'https://ui-avatars.com/api/?name=${json['name'] ?? 'User'}',
+          'https://ui-avatars.com/api/?name=$name&background=2563EB&color=fff',
+
       ratingAvg:
-          double.tryParse(json['rating']?.toString() ?? '0.0') ?? 0.0,
+          double.tryParse(json['rating']?.toString() ?? '0') ?? 0,
+
       ratingCount:
           int.tryParse(json['ratingCount']?.toString() ?? '0') ?? 0,
-      city: json['city'],
+
+      city: json['city']?.toString() ?? '',
     );
   }
 }
