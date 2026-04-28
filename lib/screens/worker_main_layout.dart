@@ -49,10 +49,10 @@ class _WorkerMainLayoutState extends State<WorkerMainLayout> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _navItem(Icons.home_rounded, 'MISIONES', 0),
-            _navItem(Icons.list_alt_rounded, 'POSTULACIONES', 1),
-            _navItem(Icons.chat_bubble_outline_rounded, 'MENSAJES', 2),
-            _navItem(Icons.person_outline_rounded, 'PERFIL', 3),
+            _navItem(Icons.home_rounded, 'Misiones', 0),
+            _navItem(Icons.list_alt_rounded, 'Postulaciones', 1),
+            _navItem(Icons.chat_bubble_outline_rounded, 'Mensajes', 2),
+            _navItem(Icons.person_outline_rounded, 'Perfil', 3),
           ],
         ),
       ),

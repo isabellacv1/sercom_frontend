@@ -81,7 +81,7 @@ class _PostulationsScreenState extends State<PostulationsScreen>
             style: GoogleFonts.montserrat(
               color: const Color(0xFF0F172A),
               fontWeight: FontWeight.w800,
-              fontSize: 28,
+              fontSize: 24,
             ),
           ),
           Container(
