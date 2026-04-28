@@ -39,8 +39,28 @@ class Proposal {
       availableDate: json['availableDate']?.toString(),
       availableFrom: json['availableFrom']?.toString(),
       availableTo: json['availableTo']?.toString(),
-      profile: json['worker'] != null ? Profile.fromJson(json['worker']) : null,
+      profile: json['worker'] != null
+          ? Profile.fromJson(json['worker'])
+          : null,
     );
+  }
+
+  String get formattedTimeRange {
+    if (availableFrom != null && availableTo != null) {
+      String from = _formatTime(availableFrom!);
+      String to = _formatTime(availableTo!);
+      return '$from - $to';
+    }
+
+    if (estimatedDuration != null && estimatedDuration!.isNotEmpty) {
+      return estimatedDuration!;
+    }
+
+    return 'Tiempo no especificado';
+  }
+
+  String _formatTime(String time) {
+    return time.length >= 5 ? time.substring(0, 5) : time;
   }
 }
 
@@ -64,9 +84,11 @@ class Profile {
       fullName: json['name']?.toString() ?? 'Técnico',
       avatarUrl: json['profileImageUrl']?.toString() ??
           'https://ui-avatars.com/api/?name=${json['name'] ?? 'User'}',
-      ratingAvg: double.tryParse(json['rating']?.toString() ?? '0.0') ?? 0.0,
-      ratingCount: int.tryParse(json['ratingCount']?.toString() ?? '0') ?? 0,
-      city: 'Sin ubicación',
+      ratingAvg:
+          double.tryParse(json['rating']?.toString() ?? '0.0') ?? 0.0,
+      ratingCount:
+          int.tryParse(json['ratingCount']?.toString() ?? '0') ?? 0,
+      city: json['city'],
     );
   }
 }

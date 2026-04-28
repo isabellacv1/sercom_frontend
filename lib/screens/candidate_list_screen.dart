@@ -414,7 +414,41 @@ class TechnicianCard extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 14),
 
+          // 📄 Descripción de la propuesta
+          Text(
+            proposal.message.isNotEmpty
+                ? proposal.message
+                : 'Sin descripción de la propuesta',
+            style: const TextStyle(
+              fontSize: 14,
+              color: Color(0xFF475569),
+              height: 1.4,
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          // ⏱ Tiempo estimado
+          Row(
+            children: [
+              const Icon(
+                Icons.access_time,
+                size: 16,
+                color: Color(0xFF2563EB),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                proposal.formattedTimeRange,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF64748B),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 16),
             child: Divider(color: Color(0xFFF1F5F9), thickness: 1),
