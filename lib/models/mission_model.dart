@@ -15,6 +15,8 @@ class MissionModel {
   final String? createdAtRelative;
   final int? priceMin;
   final int? priceMax;
+  final double? latitude;
+  final double? longitude;
   final String? scheduledDate;
   final String? scheduledFrom;
   final String? scheduledTo;
@@ -39,6 +41,8 @@ class MissionModel {
     this.scheduledFrom,
     this.scheduledTo,
     this.scheduledAt,
+    this.latitude,
+    this.longitude,
   });
 
   factory MissionModel.fromJson(Map<String, dynamic> json) {
@@ -98,6 +102,8 @@ class MissionModel {
         json,
         ['scheduled_to', 'scheduledTo', 'available_to', 'availableTo'],
       ),
+      latitude: double.tryParse(json['latitude']?.toString() ?? ''),
+      longitude: double.tryParse(json['longitude']?.toString() ?? ''),
     );
   }
 }
