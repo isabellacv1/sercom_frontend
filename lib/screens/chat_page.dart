@@ -82,19 +82,30 @@ class _ChatPageState extends State<ChatPage> {
       final alreadyExists = _messages.any((m) => m.id == message.id);
       if (alreadyExists) return;
 
+      final isMine = message.isMine(_currentUserId);
+
       setState(() {
         _messages = [..._messages, message];
       });
 
       _scrollToBottom();
-      _chatSocketService.markAsRead(widget.room.id);
+
+      // Solo marco como leído si el mensaje lo envió la otra persona
+      if (!isMine) {
+        _chatSocketService.markAsRead(widget.room.id);
+      }
     });
 
     _chatSocketService.listenMessagesRead((data) {
       if (!mounted) return;
 
       final roomId = data['roomId']?.toString();
+      final readerUserId = data['userId']?.toString();
+
       if (roomId != widget.room.id) return;
+
+      // Si yo mismo marqué como leído, no debo poner mis propios mensajes como vistos
+      if (readerUserId == null || readerUserId == _currentUserId) return;
 
       setState(() {
         _messages = _messages.map((message) {
@@ -111,6 +122,7 @@ class _ChatPageState extends State<ChatPage> {
               messageType: message.messageType,
             );
           }
+
           return message;
         }).toList();
       });
@@ -514,6 +526,9 @@ class _MessageBubble extends StatelessWidget {
     final bubbleColor = isMine ? const Color(0xFF2563EB) : Colors.white;
     final textColor = isMine ? Colors.white : const Color(0xFF0F172A);
     final metaColor = isMine ? Colors.white70 : const Color(0xFF94A3B8);
+    final readColor = message.isRead
+        ? const Color(0xFF86EFAC)
+        : Colors.white54;
 
     return Align(
       alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
@@ -590,13 +605,22 @@ class _MessageBubble extends StatelessWidget {
                         ),
                       ),
                       if (isMine) ...[
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 5),
                         Icon(
                           message.isRead
                               ? Icons.done_all_rounded
                               : Icons.check_rounded,
-                          size: 14,
-                          color: metaColor,
+                          size: 16,
+                          color: readColor,
+                        ),
+                        const SizedBox(width: 3),
+                        Text(
+                          message.isRead ? 'Visto' : 'Enviado',
+                          style: TextStyle(
+                            color: readColor,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ],
                     ],
