@@ -59,4 +59,24 @@ class ProposalService {
       throw Exception('Error inesperado cargando propuestas: $e');
     }
   }
+
+  /// Retorna las propuestas del trabajador autenticado,
+  /// opcionalmente filtradas por status ('pending' | 'accepted').
+  Future<List<Map<String, dynamic>>> getMyProposals({String? status}) async {
+    try {
+      final response = await _apiClient.dio.get(
+        '/proposals/mine',
+        queryParameters: status != null ? {'status': status} : null,
+      );
+      final List data = response.data as List;
+      return data.cast<Map<String, dynamic>>();
+    } on DioException catch (e) {
+      if (e.response != null) {
+        throw Exception('Error cargando postulaciones: ${e.response!.statusCode}');
+      }
+      throw Exception('Error de conexion.');
+    } catch (e) {
+      throw Exception('Error inesperado: $e');
+    }
+  }
 }

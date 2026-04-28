@@ -42,6 +42,12 @@ class MissionService {
     return data.map((e) => MissionModel.fromJson(e)).toList();
   }
 
+  Future<List<MissionModel>> getMissionsByStatus(String status) async {
+    final response = await api.get('/missions', queryParameters: {'status': status});
+    final data = response.data as List;
+    return data.map((e) => MissionModel.fromJson(e)).toList();
+  }
+
   Future<MissionModel> getMissionById(String missionId) async {
     final response = await api.get('/services/me/$missionId');
 

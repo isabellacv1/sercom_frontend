@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/token_storage.dart';
 import 'home_page.dart';
-import 'worker_home_screen.dart';
+import 'worker_main_layout.dart';
 import 'login_page.dart';
 import '../services/auth_service.dart';
 
@@ -38,7 +38,7 @@ class _AuthGateState extends State<AuthGate> {
         if (snapshot.data?['hasSession'] == true) {
           final role = snapshot.data?['role'];
           if (role == 'technician' || role == 'worker') {
-            return const WorkerHomeScreen();
+            return const WorkerMainLayout();
           }
           return const HomePage();
         }

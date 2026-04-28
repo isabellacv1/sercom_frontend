@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/auth_service.dart';
 import 'home_page.dart';
-import 'worker_home_screen.dart';
+import 'worker_main_layout.dart';
 import 'worker_onboarding_page.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -52,7 +52,7 @@ class _ProfilePageState extends State<ProfilePage> {
         context,
         MaterialPageRoute(
           builder: (context) => newRole == 'technician' 
-              ? const WorkerHomeScreen() 
+              ? const WorkerMainLayout() 
               : const HomePage(),
         ),
         (route) => false,
@@ -78,11 +78,12 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     final isWorker = _userRole == 'technician';
+    final mainColor = isWorker ? const Color(0xFFFF7A20) : const Color(0xFF2563EB);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF6F7FB),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF2563EB), // Blue top
+        backgroundColor: mainColor, // Dynamic top color
         elevation: 0,
         actions: [
           IconButton(
@@ -97,9 +98,9 @@ class _ProfilePageState extends State<ProfilePage> {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.only(bottom: 32),
-            decoration: const BoxDecoration(
-              color: Color(0xFF2563EB),
-              borderRadius: BorderRadius.only(
+            decoration: BoxDecoration(
+              color: mainColor, // Dynamic background
+              borderRadius: const BorderRadius.only(
                 bottomLeft: Radius.circular(32),
                 bottomRight: Radius.circular(32),
               ),
@@ -221,11 +222,11 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                     child: Column(
                       children: [
-                        _buildAccountOption(Icons.badge, 'Información Personal'),
+                        _buildAccountOption(Icons.badge, 'Información Personal', isWorker),
                         const Divider(height: 1, indent: 60),
-                        _buildAccountOption(Icons.credit_card, 'Métodos de Pago'),
+                        _buildAccountOption(Icons.credit_card, 'Métodos de Pago', isWorker),
                         const Divider(height: 1, indent: 60),
-                        _buildAccountOption(Icons.notifications, 'Notificaciones'),
+                        _buildAccountOption(Icons.notifications, 'Notificaciones', isWorker),
                       ],
                     ),
                   ),
@@ -288,15 +289,16 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildAccountOption(IconData icon, String title) {
+  Widget _buildAccountOption(IconData icon, String title, bool isWorker) {
+    final mainColor = isWorker ? const Color(0xFFFF7A20) : const Color(0xFF2563EB);
     return ListTile(
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: const Color(0xFFEFF6FF),
+          color: mainColor.withOpacity(0.1),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: Icon(icon, color: const Color(0xFF2563EB), size: 20),
+        child: Icon(icon, color: mainColor, size: 20),
       ),
       title: Text(
         title,
