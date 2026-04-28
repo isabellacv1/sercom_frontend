@@ -20,15 +20,18 @@ class ApiClient {
     dio.interceptors.add(
       InterceptorsWrapper(
       onRequest: (options, handler) async {
-  final prefs = await SharedPreferences.getInstance();
-  final token = prefs.getString('token') ?? '';
+        final prefs = await SharedPreferences.getInstance();
+        final token = prefs.getString('token') ?? '';
+        
+        print('INTERCEPTOR - URL: ${options.path}');
+        print('INTERCEPTOR - TOKEN PRESENTE: ${token.isNotEmpty}');
 
-  if (token.isNotEmpty) {
-    options.headers['Authorization'] = 'Bearer $token';
-  }
+        if (token.isNotEmpty) {
+          options.headers['Authorization'] = 'Bearer $token';
+        }
 
-  handler.next(options);
-},
+        handler.next(options);
+      },
       ),
     );
   }
