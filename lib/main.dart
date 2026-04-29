@@ -16,6 +16,7 @@ import 'screens/service_confirmation_page.dart';
 import 'screens/review_screen.dart';
 import 'screens/chat_rooms_page.dart';
 import 'screens/personal_info_page.dart';
+import 'screens/worker_profile_page.dart';
 import 'screens/worker_home_screen.dart';
 import 'models/technician.dart';
 
@@ -48,6 +49,7 @@ class MyApp extends StatelessWidget {
         '/workerHome': (context) => const WorkerHomeScreen(),
         '/chat-rooms': (context) => const ChatRoomsPage(),
         '/personal-info': (context) => const PersonalInfoPage(),
+        '/worker-profile': (context) => const WorkerProfilePage(),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/register') {

@@ -340,6 +340,20 @@ class _ProfilePageState extends State<ProfilePage> {
                                   },
                                 ),
                                 const Divider(height: 1, indent: 60),
+                                if (isWorker) ...[
+                                  _buildAccountOption(
+                                    Icons.engineering_rounded,
+                                    'Perfil de Trabajador',
+                                    isWorker,
+                                    onTap: () {
+                                      Navigator.pushNamed(
+                                        context,
+                                        '/worker-profile',
+                                      );
+                                    },
+                                  ),
+                                  const Divider(height: 1, indent: 60),
+                                ],
                                 _buildAccountOption(
                                   Icons.assignment_outlined,
                                   'Mis Misiones',
