@@ -7,6 +7,7 @@ import '../widgets/postulation_form_sheet.dart';
 import '../services/mission_service.dart';
 import '../models/mission_model.dart';
 import '../services/auth_service.dart';
+import 'mission_detail_screen.dart';
 
 class WorkerHomeScreen extends StatefulWidget {
   const WorkerHomeScreen({Key? key}) : super(key: key);
@@ -498,7 +499,17 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
             width: double.infinity,
             height: 46,
             child: OutlinedButton(
-              onPressed: () {},
+              onPressed: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => MissionDetailScreen(mission: mission),
+                  ),
+                );
+                if (result == true) {
+                  await _markAsPostulated(mission.id);
+                }
+              },
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: Color(0xFFFF7A20)),
                 shape: RoundedRectangleBorder(

@@ -4,6 +4,8 @@ import '../models/technician.dart';
 import '../models/mission_model.dart';
 import '../models/proposal.dart';
 import '../services/proposal_service.dart';
+import 'chat_rooms_page.dart';
+import 'match_confirmation_screen.dart';
 import 'technician_profile_screen.dart';
 
 class CandidateListScreen extends StatefulWidget {
@@ -11,10 +13,10 @@ class CandidateListScreen extends StatefulWidget {
   final MissionModel mission;
 
   const CandidateListScreen({
-    Key? key,
+    super.key,
     required this.serviceId,
     required this.mission,
-  }) : super(key: key);
+  });
 
   @override
   State<CandidateListScreen> createState() => _CandidateListScreenState();
@@ -36,7 +38,7 @@ class _CandidateListScreenState extends State<CandidateListScreen> {
     _proposalsFuture = _proposalService.getProposalsByService(widget.serviceId);
   }
 
-  void _confirmAccept(String proposalId) {
+  void _confirmAccept(Proposal proposal) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -50,7 +52,7 @@ class _CandidateListScreenState extends State<CandidateListScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              _acceptProposal(proposalId);
+              _acceptProposal(proposal);
             },
             child: const Text('Aceptar'),
           ),
@@ -59,54 +61,66 @@ class _CandidateListScreenState extends State<CandidateListScreen> {
     );
   }
 
-  Future<void> _acceptProposal(String proposalId) async {
+  Future<void> _acceptProposal(Proposal proposal) async {
+  setState(() {
+    _isLoadingAccept = true;
+    _processingProposalId = proposal.id;
+  });
+
+  try {
+    await _proposalService.acceptProposal(proposal.id);
+  } catch (e) {
+    if (!mounted) return;
+
     setState(() {
-      _isLoadingAccept = true;
-      _processingProposalId = proposalId;
+      _isLoadingAccept = false;
+      _processingProposalId = null;
     });
 
-    try {
-      await _proposalService.acceptProposal(proposalId);
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle, color: Colors.white),
-              const SizedBox(width: 8),
-              const Text('¡Contratación procesada con éxito!'),
-            ],
-          ),
-          backgroundColor: const Color(0xFF10B981),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-
-      // Refresh data
-      setState(() {
-        _loadProposals();
-        _isLoadingAccept = false;
-        _processingProposalId = null;
-      });
-    } catch (e) {
-      if (!mounted) return;
-
-      setState(() {
-        _isLoadingAccept = false;
-        _processingProposalId = null;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('No se pudo procesar la contratación: $e'),
-          backgroundColor: const Color(0xFFEF4444),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
+    final message = e.toString().replaceAll('Exception: ', '');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('No se pudo procesar la contratación: $message'),
+        backgroundColor: const Color(0xFFEF4444),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+    return;
   }
+
+  if (!mounted) return;
+
+  setState(() {
+    _loadProposals();
+    _isLoadingAccept = false;
+    _processingProposalId = null;
+  });
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text('¡Contratación procesada con éxito!'),
+      backgroundColor: Color(0xFF10B981),
+      behavior: SnackBarBehavior.floating,
+    ),
+  );
+
+  final technician = Technician.fromProposal(proposal);
+
+  await Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => MatchConfirmationScreen(
+        technician: technician,
+        serviceId: widget.serviceId,
+        serviceTitle: widget.mission.serviceTitle,
+      ),
+    ),
+  );
+
+  if (mounted) {
+    setState(_loadProposals);
+  }
+}
 
   bool _isLoadingAccept = false;
   String? _processingProposalId;
@@ -145,7 +159,11 @@ class _CandidateListScreenState extends State<CandidateListScreen> {
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Color(0xFF0F172A), size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios,
+            color: Color(0xFF0F172A),
+            size: 20,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
@@ -189,7 +207,11 @@ class _CandidateListScreenState extends State<CandidateListScreen> {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.location_on_outlined, size: 16, color: Color(0xFF64748B)),
+                      const Icon(
+                        Icons.location_on_outlined,
+                        size: 16,
+                        color: Color(0xFF64748B),
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         widget.mission.address.isNotEmpty
@@ -258,13 +280,17 @@ class _CandidateListScreenState extends State<CandidateListScreen> {
                     return const Center(
                       child: Text(
                         'Aún no hay propuestas para esta misión',
-                        style: TextStyle(color: Color(0xFF64748B), fontSize: 16),
+                        style: TextStyle(
+                          color: Color(0xFF64748B),
+                          fontSize: 16,
+                        ),
                       ),
                     );
                   }
 
                   final allProposals = snapshot.data!;
                   final proposals = _visibleProposals(allProposals);
+
 
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -333,9 +359,7 @@ class _CandidateListScreenState extends State<CandidateListScreen> {
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(
-          top: BorderSide(color: Color(0xFFE5E7EB)),
-        ),
+        border: Border(top: BorderSide(color: Color(0xFFE5E7EB))),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -358,7 +382,12 @@ class _CandidateListScreenState extends State<CandidateListScreen> {
           _BottomItem(
             icon: Icons.chat_bubble_outline,
             label: 'Mensajes',
-            onTap: () {},
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ChatRoomsPage()),
+              );
+            },
           ),
           _BottomItem(
             icon: Icons.person_outline,
@@ -374,16 +403,16 @@ class _CandidateListScreenState extends State<CandidateListScreen> {
 class TechnicianCard extends StatelessWidget {
   final Technician technician;
   final Proposal proposal;
-  final Function(String) onAccept;
+  final ValueChanged<Proposal> onAccept;
   final bool isProcessing;
 
   const TechnicianCard({
-    Key? key,
+    super.key,
     required this.technician,
     required this.proposal,
     required this.onAccept,
     this.isProcessing = false,
-  }) : super(key: key);
+  });
 
   bool get isAccepted => proposal.status == 'accepted';
   bool get isRejected => proposal.status == 'rejected';
@@ -438,7 +467,11 @@ class TechnicianCard extends StatelessWidget {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        const Icon(Icons.star, color: Color(0xFFF59E0B), size: 16),
+                        const Icon(
+                          Icons.star,
+                          color: Color(0xFFF59E0B),
+                          size: 16,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           '${technician.rating}',
@@ -470,10 +503,7 @@ class TechnicianCard extends StatelessWidget {
                   ),
                   const Text(
                     'presupuesto',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF94A3B8),
-                    ),
+                    style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
                   ),
                 ],
               ),
@@ -522,83 +552,98 @@ class TechnicianCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                technician.distance,
-                style: const TextStyle(
-                  color: Color(0xFF64748B),
-                  fontSize: 12,
+              Expanded(
+                flex: 4,
+                child: Text(
+                  technician.distance,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF64748B),
+                    fontSize: 12,
+                  ),
                 ),
               ),
+              const SizedBox(width: 8),
 
-              Row(
-                children: [
-                  OutlinedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => TechnicianProfileScreen(
-                            technician: technician,
+              Flexible(
+                flex: 5,
+                child: Wrap(
+                  alignment: WrapAlignment.end,
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    OutlinedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                TechnicianProfileScreen(technician: technician),
                           ),
-                        ),
-                      );
-                    },
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF2563EB),
-                      side: const BorderSide(color: Color(0xFF2563EB)),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                    ),
-                    child: const Text('Ver perfil'),
-                  ),
-
-                  const SizedBox(width: 8),
-
-                  if (isAccepted)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF10B981),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.check, color: Colors.white, size: 16),
-                          SizedBox(width: 4),
-                          Text(
-                            'Aceptada',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  else if (!isRejected)
-                    ElevatedButton(
-                      onPressed: isProcessing ? null : () => onAccept(proposal.id),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2563EB),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
+                        );
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF2563EB),
+                        side: const BorderSide(color: Color(0xFF2563EB)),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
                         ),
                       ),
-                      child: isProcessing
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Text('Aceptar'),
+                      child: const Text('Ver perfil'),
                     ),
-                ],
+
+                    if (isAccepted)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.check, color: Colors.white, size: 16),
+                            SizedBox(width: 4),
+                            Text(
+                              'Aceptada',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else if (!isRejected)
+                      ElevatedButton(
+                        onPressed: isProcessing
+                            ? null
+                            : () => onAccept(proposal),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2563EB),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                        child: isProcessing
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text('Aceptar'),
+                      ),
+                  ],
+                ),
               ),
             ],
           ),

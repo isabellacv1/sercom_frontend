@@ -3,6 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'worker_home_screen.dart';
 import 'postulations_screen.dart';
 import 'profile_page.dart';
+import 'chat_rooms_page.dart';
+import 'worker_main_layout.dart';
 
 class WorkerMainLayout extends StatefulWidget {
   const WorkerMainLayout({Key? key}) : super(key: key);
@@ -17,7 +19,7 @@ class _WorkerMainLayoutState extends State<WorkerMainLayout> {
   final List<Widget> _pages = [
     const WorkerHomeScreen(),
     const PostulationsScreen(),
-    const _MessagesPlaceholder(),
+    const ChatRoomsPage(),
     const ProfilePage(),
   ];
 
@@ -86,41 +88,3 @@ class _WorkerMainLayoutState extends State<WorkerMainLayout> {
   }
 }
 
-class _MessagesPlaceholder extends StatelessWidget {
-  const _MessagesPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: Text(
-          'Mensajes',
-          style: GoogleFonts.montserrat(
-            color: const Color(0xFF0F172A),
-            fontWeight: FontWeight.w800,
-            fontSize: 24,
-          ),
-        ),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.chat_bubble_outline_rounded, size: 64, color: Colors.grey.shade300),
-            const SizedBox(height: 16),
-            Text(
-              'Próximamente Chat en Vivo',
-              style: GoogleFonts.montserrat(
-                color: Colors.grey,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

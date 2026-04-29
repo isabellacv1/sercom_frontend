@@ -12,8 +12,13 @@ import 'screens/match_confirmation_screen.dart';
 import 'screens/technician_profile_screen.dart';
 import 'screens/role_selection_page.dart';
 import 'screens/map_picker_page.dart';
+<<<<<<< HEAD
 import 'screens/service_confirmation_page.dart';
 import 'screens/review_screen.dart';
+=======
+import 'screens/chat_rooms_page.dart';
+import 'screens/personal_info_page.dart';
+>>>>>>> 16c1584c181bcaf24f1d9d7655e174469778febb
 
 import 'models/technician.dart';
 
@@ -40,26 +45,27 @@ class MyApp extends StatelessWidget {
         '/mission-dispatch': (context) => const MissionDispatchPage(),
         '/missions': (context) => const MissionsPage(),
         '/map-picker': (context) => const MapPickerPage(),
+<<<<<<< HEAD
         '/review': (context) => ReviewScreen(
           serviceId: ModalRoute.of(context)!.settings.arguments as String? ?? '',
         ),
+=======
+        '/chat-rooms': (context) => const ChatRoomsPage(),
+        '/personal-info': (context) => const PersonalInfoPage(),
+>>>>>>> 16c1584c181bcaf24f1d9d7655e174469778febb
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/register') {
           final role = settings.arguments as String;
 
-          return MaterialPageRoute(
-            builder: (_) => RegisterPage(role: role),
-          );
+          return MaterialPageRoute(builder: (_) => RegisterPage(role: role));
         }
 
         if (settings.name == '/technician-profile') {
           final technician = settings.arguments as Technician;
 
           return MaterialPageRoute(
-            builder: (_) => TechnicianProfileScreen(
-              technician: technician,
-            ),
+            builder: (_) => TechnicianProfileScreen(technician: technician),
           );
         }
 
@@ -67,9 +73,7 @@ class MyApp extends StatelessWidget {
           final technician = settings.arguments as Technician;
 
           return MaterialPageRoute(
-            builder: (_) => MatchConfirmationScreen(
-              technician: technician,
-            ),
+            builder: (_) => MatchConfirmationScreen(technician: technician),
           );
         }
 

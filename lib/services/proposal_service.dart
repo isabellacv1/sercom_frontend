@@ -34,8 +34,18 @@ class ProposalService {
   Future<void> acceptProposal(String proposalId) async {
   try {
     await _apiClient.dio.post('/proposals/$proposalId/accept');
+  } on DioException catch (e) {
+    print('STATUS: ${e.response?.statusCode}');
+    print('DATA: ${e.response?.data}');
+
+    final data = e.response?.data;
+    final message = data is Map
+        ? data['message']?.toString()
+        : null;
+
+    throw Exception(message ?? 'Error al aceptar la propuesta');
   } catch (e) {
-    throw Exception('Error al aceptar la propuesta');
+    throw Exception('Error inesperado al aceptar la propuesta: $e');
   }
 }
   Future<List<Proposal>> getProposalsByService(String serviceId) async {

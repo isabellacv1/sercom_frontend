@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/category_model.dart';
 import '../services/category_service.dart';
 import '../services/auth_service.dart';
+import 'chat_rooms_page.dart';
 import 'missions_page.dart';
 import 'profile_page.dart';
 
@@ -21,7 +22,7 @@ class _HomePageState extends State<HomePage> {
   List<CategoryModel> categories = [];
   List<CategoryModel> filteredCategories = [];
   String userName = 'Usuario';
-  
+
   int _currentIndex = 0;
   final PageController _pageController = PageController();
 
@@ -52,10 +53,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> loadInitialData() async {
-    await Future.wait([
-      loadUserData(),
-      loadCategories(),
-    ]);
+    await Future.wait([loadUserData(), loadCategories()]);
   }
 
   Future<void> loadUserData() async {
@@ -102,9 +100,9 @@ class _HomePageState extends State<HomePage> {
         filteredCategories = [];
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error cargando categorías: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error cargando categorías: $e')));
     } finally {
       if (!mounted) return;
       setState(() {
@@ -191,7 +189,7 @@ class _HomePageState extends State<HomePage> {
                       children: [
                         _buildHomeContent(),
                         const MissionsPage(),
-                        const Center(child: Text('Mensajes')),
+                        const ChatRoomsPage(),
                         const ProfilePage(),
                       ],
                     ),
@@ -259,10 +257,7 @@ class _HomePageState extends State<HomePage> {
             children: [
               Text(
                 'Hola, $userName',
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Color(0xFF64748B),
-                ),
+                style: const TextStyle(fontSize: 16, color: Color(0xFF64748B)),
               ),
               const SizedBox(height: 2),
               const Text(
@@ -340,10 +335,7 @@ class _HomePageState extends State<HomePage> {
           border: InputBorder.none,
           contentPadding: EdgeInsets.symmetric(vertical: 20),
         ),
-        style: const TextStyle(
-          fontSize: 16,
-          color: Color(0xFF0F172A),
-        ),
+        style: const TextStyle(fontSize: 16, color: Color(0xFF0F172A)),
       ),
     );
   }
@@ -457,9 +449,7 @@ class _HomePageState extends State<HomePage> {
                         fit: BoxFit.cover,
                       ),
                     ),
-                    Container(
-                      color: const Color(0x551E3A8A),
-                    ),
+                    Container(color: const Color(0x551E3A8A)),
                   ],
                 ),
               ),
@@ -498,10 +488,7 @@ class _HomePageState extends State<HomePage> {
             SizedBox(width: 12),
             Text(
               'Publicar misión',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
             ),
           ],
         ),
@@ -535,10 +522,7 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               SizedBox(width: 4),
-              Icon(
-                Icons.chevron_right,
-                color: Color(0xFF2563EB),
-              ),
+              Icon(Icons.chevron_right, color: Color(0xFF2563EB)),
             ],
           ),
         ),
@@ -553,10 +537,7 @@ class _HomePageState extends State<HomePage> {
         child: Center(
           child: Text(
             'No se encontraron categorías',
-            style: TextStyle(
-              fontSize: 16,
-              color: Color(0xFF64748B),
-            ),
+            style: TextStyle(fontSize: 16, color: Color(0xFF64748B)),
           ),
         ),
       );
@@ -641,9 +622,7 @@ class _HomePageState extends State<HomePage> {
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(
-          top: BorderSide(color: Color(0xFFE5E7EB)),
-        ),
+        border: Border(top: BorderSide(color: Color(0xFFE5E7EB))),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
