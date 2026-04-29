@@ -93,9 +93,12 @@ class ChatRoom {
       participantAvatarUrl:
           _firstString([
             participant?['profileImageUrl'],
+            participant?['profile_image_url'],
             participant?['avatarUrl'],
+            participant?['avatar_url'],
             participant?['avatar'],
             participant?['photoUrl'],
+            participant?['photo_url'],
           ]) ??
           '',
       lastMessagePreview:
@@ -129,6 +132,7 @@ class ChatRoom {
     String? currentUserId,
   ) {
     final candidates = <Map<String, dynamic>>[
+      if (_asMap(json['participant']) != null) _asMap(json['participant'])!,
       ..._mapList(json['participants']),
       ..._mapList(json['users']),
       if (_asMap(json['worker']) != null) _asMap(json['worker'])!,
