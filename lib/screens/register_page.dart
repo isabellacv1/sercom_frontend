@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'login_page.dart';
@@ -27,6 +28,9 @@ class _RegisterPageState extends State<RegisterPage> {
 
   final authService = AuthService();
 
+  PlatformFile? cedulaDocumentFile;
+  PlatformFile? workerPhotoFile;
+
   bool obscurePassword = true;
   bool isLoading = false;
   bool acceptedTerms = false;
@@ -45,6 +49,33 @@ class _RegisterPageState extends State<RegisterPage> {
     specialtyController.dispose();
     super.dispose();
   }
+
+Future<void> pickCedulaDocument() async {
+  final result = await FilePicker.platform.pickFiles(
+    type: FileType.custom,
+    allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+    withData: true,
+  );
+
+  if (result != null && result.files.isNotEmpty) {
+    setState(() {
+      cedulaDocumentFile = result.files.first;
+    });
+  }
+}
+
+Future<void> pickWorkerPhoto() async {
+  final result = await FilePicker.platform.pickFiles(
+    type: FileType.image,
+    withData: true,
+  );
+
+  if (result != null && result.files.isNotEmpty) {
+    setState(() {
+      workerPhotoFile = result.files.first;
+    });
+  }
+}
 
   Future<void> onRegister() async {
     final fullName = fullNameController.text.trim();
@@ -65,10 +96,10 @@ class _RegisterPageState extends State<RegisterPage> {
     }
 
     if (isWorker) {
-      if (cedula.isEmpty || phone.isEmpty) {
+      if (cedula.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Completa cédula y teléfono'),
+            content: Text('Completa la cédula'),
           ),
         );
         return;
@@ -89,17 +120,18 @@ class _RegisterPageState extends State<RegisterPage> {
     });
 
     try {
-      final data = await authService.register(
-        fullName: fullName,
-        email: email,
-        password: password,
-        role: widget.role,
-        cedula: isWorker ? cedula : null,
-        phone: isWorker ? phone : null,
-        address: isWorker ? address : null,
-        specialty: isWorker ? specialty : null,
-      );
-      
+final data = await authService.register(
+  fullName: fullName,
+  email: email,
+  password: password,
+  role: widget.role,
+  cedula: isWorker ? cedula : null,
+  phone: phone,
+  address: isWorker ? address : null,
+  specialty: isWorker ? specialty : null,
+  cedulaDocument: isWorker ? cedulaDocumentFile : null,
+  workerPhoto: isWorker ? workerPhotoFile : null,
+);
 
       if (!mounted) return;
 
@@ -220,7 +252,9 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                 ],
               ),
+
               const SizedBox(height: 34),
+
               Text(
                 isWorker ? 'Crea tu cuenta de trabajador' : 'Crea tu cuenta',
                 style: const TextStyle(
@@ -230,7 +264,9 @@ class _RegisterPageState extends State<RegisterPage> {
                   color: textDark,
                 ),
               ),
+
               const SizedBox(height: 22),
+
               Text(
                 isWorker
                     ? 'Completa tus datos para comenzar a recibir misiones y generar ingresos.'
@@ -242,7 +278,9 @@ class _RegisterPageState extends State<RegisterPage> {
                   fontWeight: FontWeight.w500,
                 ),
               ),
+
               const SizedBox(height: 34),
+
               const Text(
                 'Nombre completo',
                 style: TextStyle(
@@ -258,7 +296,9 @@ class _RegisterPageState extends State<RegisterPage> {
                 prefixIcon: Icons.person_rounded,
                 accentColor: accentColor,
               ),
+
               const SizedBox(height: 28),
+
               const Text(
                 'Correo electrónico',
                 style: TextStyle(
@@ -275,7 +315,9 @@ class _RegisterPageState extends State<RegisterPage> {
                 keyboardType: TextInputType.emailAddress,
                 accentColor: accentColor,
               ),
+
               const SizedBox(height: 28),
+
               const Text(
                 'Contraseña',
                 style: TextStyle(
@@ -305,7 +347,9 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                 ),
               ),
+
               const SizedBox(height: 28),
+
               const Text(
                 'Teléfono',
                 style: TextStyle(
@@ -322,8 +366,10 @@ class _RegisterPageState extends State<RegisterPage> {
                 keyboardType: TextInputType.phone,
                 accentColor: accentColor,
               ),
+
               if (isWorker) ...[
                 const SizedBox(height: 28),
+
                 const Text(
                   'Cédula',
                   style: TextStyle(
@@ -340,9 +386,11 @@ class _RegisterPageState extends State<RegisterPage> {
                   keyboardType: TextInputType.number,
                   accentColor: accentColor,
                 ),
+
                 const SizedBox(height: 28),
+
                 const Text(
-                  'Teléfono',
+                  'Documento de cédula',
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -350,14 +398,37 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                _CustomInput(
-                  controller: phoneController,
-                  hintText: 'Ingresa tu teléfono',
-                  prefixIcon: Icons.phone_rounded,
-                  keyboardType: TextInputType.phone,
-                  accentColor: accentColor,
-                ),
+_FileUploadBox(
+  title: workerPhotoFile == null
+      ? 'Subir foto'
+      : workerPhotoFile!.name,
+  icon: Icons.add_a_photo_rounded,
+  accentColor: accentColor,
+  onTap: pickWorkerPhoto,
+),
+
                 const SizedBox(height: 28),
+
+                const Text(
+                  'Foto del trabajador',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: textDark,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _FileUploadBox(
+                  title: workerPhotoFile == null
+                      ? 'Subir foto'
+                      : workerPhotoFile!.name,
+                  icon: Icons.add_a_photo_rounded,
+                  accentColor: accentColor,
+                  onTap: pickWorkerPhoto,
+                ),
+
+                const SizedBox(height: 28),
+
                 const Text(
                   'Dirección',
                   style: TextStyle(
@@ -373,7 +444,9 @@ class _RegisterPageState extends State<RegisterPage> {
                   prefixIcon: Icons.location_on_rounded,
                   accentColor: accentColor,
                 ),
+
                 const SizedBox(height: 28),
+
                 const Text(
                   'Especialidad',
                   style: TextStyle(
@@ -390,7 +463,9 @@ class _RegisterPageState extends State<RegisterPage> {
                   accentColor: accentColor,
                 ),
               ],
+
               const SizedBox(height: 22),
+
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -444,7 +519,9 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                 ],
               ),
+
               const SizedBox(height: 22),
+
               SizedBox(
                 width: double.infinity,
                 height: 74,
@@ -493,7 +570,9 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                 ),
               ),
+
               const SizedBox(height: 42),
+
               Center(
                 child: Column(
                   children: [
@@ -529,6 +608,75 @@ class _RegisterPageState extends State<RegisterPage> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FileUploadBox extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final Color accentColor;
+  final VoidCallback onTap;
+
+  const _FileUploadBox({
+    required this.title,
+    required this.icon,
+    required this.accentColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const borderColor = Color(0xFFD9DEE8);
+    const textDark = Color(0xFF101828);
+    const textSoft = Color(0xFF6B7A99);
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(22),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: borderColor),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x14000000),
+              blurRadius: 8,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: accentColor,
+              size: 24,
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                title,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 15,
+                  color: textDark,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            const Icon(
+              Icons.attach_file_rounded,
+              color: textSoft,
+              size: 22,
+            ),
+          ],
         ),
       ),
     );

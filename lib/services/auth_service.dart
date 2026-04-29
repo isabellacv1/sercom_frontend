@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:dio/dio.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/api_client.dart';
 
@@ -54,45 +56,82 @@ class AuthService {
     return data;
   }
 
-  Future<dynamic> register({
-    required String fullName,
-    required String email,
-    required String password,
-    required String role,
-    String? cedula,
-    String? phone,
-    String? address,
-    String? city,
-    String? bio,
-    String? specialty,
-  }) async {
-    final body = <String, dynamic>{
-      'fullName': fullName,
-      'email': email,
-      'password': password,
-      'role': role,
-      'cedula': cedula,
-      'phone': phone,
-      'address': address,
-      'city': city,
-      'bio': bio,
-      'specialty': specialty,
-    };
+Future<dynamic> register({
+  required String fullName,
+  required String email,
+  required String password,
+  required String role,
+  String? cedula,
+  String? phone,
+  String? address,
+  String? city,
+  String? bio,
+  String? specialty,
+  PlatformFile? cedulaDocument,
+  PlatformFile? workerPhoto,
+}) async {
+  final fields = <String, dynamic>{
+    'fullName': fullName,
+    'email': email,
+    'password': password,
+    'role': role,
+    'cedula': cedula,
+    'phone': phone,
+    'address': address,
+    'city': city,
+    'bio': bio,
+    'specialty': specialty,
+  };
 
-    body.removeWhere((key, value) => value == null);
+  fields.removeWhere((key, value) {
+    if (value == null) return true;
+    if (value is String && value.trim().isEmpty) return true;
+    return false;
+  });
 
-    print('REGISTER BODY: $body');
+  final formData = FormData.fromMap(fields);
 
-    final response = await api.post(
-      '/auth/register',
-      data: body,
+  if (cedulaDocument != null && cedulaDocument.bytes != null) {
+    formData.files.add(
+      MapEntry(
+        'cedula_document',
+        MultipartFile.fromBytes(
+          cedulaDocument.bytes!,
+          filename: cedulaDocument.name,
+        ),
+      ),
     );
-
-    print('REGISTER STATUS: ${response.statusCode}');
-    print('REGISTER DATA: ${response.data}');
-
-    return response.data;
   }
+
+  if (workerPhoto != null && workerPhoto.bytes != null) {
+    formData.files.add(
+      MapEntry(
+        'worker_photo',
+        MultipartFile.fromBytes(
+          workerPhoto.bytes!,
+          filename: workerPhoto.name,
+        ),
+      ),
+    );
+  }
+
+  print('REGISTER FIELDS: $fields');
+  print('CEDULA DOCUMENT: ${cedulaDocument?.name}');
+  print('WORKER PHOTO: ${workerPhoto?.name}');
+
+  final response = await api.post(
+    '/auth/register',
+    data: formData,
+    options: Options(
+      contentType: 'multipart/form-data',
+    ),
+  );
+
+  print('REGISTER STATUS: ${response.statusCode}');
+  print('REGISTER DATA: ${response.data}');
+
+  return response.data;
+}
 
   Future<void> switchRole(String newRole) async {
     try {
