@@ -97,7 +97,7 @@ class MissionService {
     throw Exception('Respuesta inválida al consultar misiones por estado');
   }
 
-  Future<List<MissionModel>> getNearbyOpportunities({
+  /*Future<List<MissionModel>> getNearbyOpportunities({
     required double latitude,
     required double longitude,
     double radiusKm = 15,
@@ -129,7 +129,7 @@ class MissionService {
         .whereType<Map<String, dynamic>>()
         .map(MissionModel.fromJson)
         .toList();
-  }
+  }*/
 
   Future<MissionModel> getMissionById(String missionId) async {
     final response = await api.get('/services/me/$missionId');

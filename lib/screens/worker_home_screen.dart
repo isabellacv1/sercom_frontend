@@ -23,24 +23,26 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
   String? _userName;
   final _missionService = MissionService();
   Set<String> _postulatedMissions = {};
-  List<MissionModel> _cachedNearbyMissions = [];
-  int _newNearbyNotifications = 0;
-  final List<MissionModel> _notificationMissions = [];
-  Timer? _pollingTimer;
+  //List<MissionModel> _cachedNearbyMissions = [];
+  //int _newNearbyNotifications = 0;
+  //final List<MissionModel> _notificationMissions = [];
+  //Timer? _pollingTimer;
 
   @override
   void initState() {
     super.initState();
     _loadUser();
     _loadPostulatedMissions();
-    _startNearbyPolling();
+    //_startNearbyPolling();
   }
 
+/*
   @override
   void dispose() {
     _pollingTimer?.cancel();
     super.dispose();
   }
+  */
 
   Future<void> _loadUser() async {
     final name = await AuthService().getUserName();
@@ -95,6 +97,7 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
     return missions.where(_isPostulable).toList();
   }
 
+/*
   Future<List<MissionModel>> _loadNearbyMissions({
     bool notifyForNew = false,
   }) async {
@@ -302,6 +305,7 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
       },
     );
   }
+  */
 
   @override
   Widget build(BuildContext context) {
@@ -335,36 +339,19 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
                   fontSize: 28,
                 ),
               ),
-              Stack(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                    ),
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.notifications_none,
-                        color: Color(0xFF0F172A),
-                      ),
-                      onPressed: _openNotificationsSheet,
-                    ),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.notifications_none,
+                    color: Color(0xFF0F172A),
                   ),
-                  if (_newNearbyNotifications > 0)
-                    Positioned(
-                      right: 8,
-                      top: 8,
-                      child: Container(
-                        width: 10,
-                        height: 10,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFFF7A20),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ),
-                ],
+                  onPressed: () {},
+                ),
               ),
             ],
           ),
@@ -398,7 +385,8 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
 
   Widget _buildMissionsList() {
     return FutureBuilder<List<MissionModel>>(
-      future: _loadNearbyMissions(),
+      future: _missionService.getMissionsByStatus('active'),
+      //future: _loadNearbyMissions(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return ListView(
@@ -430,7 +418,9 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
           );
         }
 
-        final missions = snapshot.data ?? [];
+        final allMissions = snapshot.data ?? [];
+        final missions = _filterPostulableMissions(allMissions);
+        //final missions = snapshot.data ?? [];
 
         if (missions.isEmpty) {
           return ListView(
@@ -464,7 +454,8 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
 
         return RefreshIndicator(
           onRefresh: () async {
-            await _loadNearbyMissions(notifyForNew: true);
+            setState(() {});
+            //await _loadNearbyMissions(notifyForNew: true);
             await _loadPostulatedMissions();
             if (mounted) setState(() {});
           },
@@ -565,288 +556,266 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
   }
 
   Widget _buildMissionCard(MissionModel mission) {
-    final priceMin = mission.priceMin ?? mission.minBudget;
-    final priceMax = mission.priceMax ?? mission.maxBudget;
+  final priceMin = mission.priceMin ?? mission.minBudget;
+  final priceMax = mission.priceMax ?? mission.maxBudget;
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: const Color(0xFFF1F5F9)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 11,
-                height: 11,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFFF7A20),
-                  shape: BoxShape.circle,
+  return Container(
+    margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+    padding: const EdgeInsets.all(24),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(26),
+      border: Border.all(color: const Color(0xFFF1F5F9)),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.03),
+          blurRadius: 20,
+          offset: const Offset(0, 8),
+        ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 11,
+              height: 11,
+              decoration: const BoxDecoration(
+                color: Color(0xFFFF7A20),
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                mission.statusLabel ?? _statusText(mission.status),
+                style: GoogleFonts.montserrat(
+                  color: const Color(0xFFFF7A20),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  mission.statusLabel ?? _statusText(mission.status),
+            ),
+            if (mission.createdAtRelative != null &&
+                mission.createdAtRelative!.isNotEmpty)
+              Text(
+                mission.createdAtRelative!,
+                style: GoogleFonts.montserrat(
+                  color: const Color(0xFF94A3B8),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+          ],
+        ),
+
+        const SizedBox(height: 14),
+
+        if (mission.categoryName != null && mission.categoryName!.isNotEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF7ED),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.category_outlined,
+                  color: Color(0xFFFF7A20),
+                  size: 14,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  mission.categoryName!,
                   style: GoogleFonts.montserrat(
                     color: const Color(0xFFFF7A20),
                     fontWeight: FontWeight.w700,
-                    fontSize: 13,
+                    fontSize: 12,
                   ),
                 ),
-              ),
-              if (mission.createdAtRelative != null &&
-                  mission.createdAtRelative!.isNotEmpty)
-                Text(
-                  mission.createdAtRelative!,
-                  style: GoogleFonts.montserrat(
-                    color: const Color(0xFF94A3B8),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-            ],
+              ],
+            ),
           ),
 
-          const SizedBox(height: 14),
+        const SizedBox(height: 12),
 
-          if (mission.categoryName != null && mission.categoryName!.isNotEmpty)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF7ED),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.category_outlined,
-                    color: Color(0xFFFF7A20),
-                    size: 14,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    mission.categoryName!,
-                    style: GoogleFonts.montserrat(
-                      color: const Color(0xFFFF7A20),
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+        Text(
+          mission.serviceTitle ?? 'Servicio disponible',
+          style: GoogleFonts.montserrat(
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            color: const Color(0xFF0F172A),
+          ),
+        ),
 
-          const SizedBox(height: 12),
+        const SizedBox(height: 10),
 
+        if (mission.description.isNotEmpty)
           Text(
-            mission.serviceTitle ?? 'Servicio disponible',
+            mission.description,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
             style: GoogleFonts.montserrat(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: const Color(0xFF0F172A),
+              fontSize: 14,
+              color: const Color(0xFF64748B),
+              height: 1.5,
+              fontWeight: FontWeight.w500,
             ),
           ),
 
-          const SizedBox(height: 10),
+        const SizedBox(height: 16),
+        const Divider(color: Color(0xFFF1F5F9), thickness: 1),
+        const SizedBox(height: 14),
 
-          if (mission.description.isNotEmpty)
-            Text(
-              mission.description,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.montserrat(
-                fontSize: 14,
-                color: const Color(0xFF64748B),
-                height: 1.5,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-
-          const SizedBox(height: 16),
-          const Divider(color: Color(0xFFF1F5F9), thickness: 1),
-          const SizedBox(height: 14),
-
-          Wrap(
-            spacing: 18,
-            runSpacing: 10,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
+        Wrap(
+          spacing: 18,
+          runSpacing: 10,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            if (priceMin != null || priceMax != null)
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(
-                    Icons.location_on_outlined,
-                    color: Color(0xFFFF7A20),
-                    size: 18,
-                  ),
-                  const SizedBox(width: 8),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 160),
-                    child: Text(
-                      _formatLocation(mission),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.montserrat(
-                        color: const Color(0xFF64748B),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              if (priceMin != null || priceMax != null)
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.wallet_outlined,
-                      color: Color(0xFFFF7A20),
-                      size: 18,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      _formatBudget(priceMin, priceMax),
-                      style: GoogleFonts.montserrat(
-                        color: const Color(0xFF0F172A),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.calendar_today_outlined,
+                    Icons.wallet_outlined,
                     color: Color(0xFFFF7A20),
                     size: 18,
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    _formatAvailability(mission),
+                    _formatBudget(priceMin, priceMax),
                     style: GoogleFonts.montserrat(
-                      color: const Color(0xFF64748B),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 20),
-
-          SizedBox(
-            width: double.infinity,
-            height: 46,
-            child: OutlinedButton(
-              onPressed: () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => MissionDetailScreen(mission: mission),
-                  ),
-                );
-                if (result == true) {
-                  await _markAsPostulated(mission.id);
-                }
-              },
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Color(0xFFFF7A20)),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Detalles de la Misión',
-                    style: GoogleFonts.montserrat(
-                      color: const Color(0xFFFF7A20),
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  const Icon(
-                    Icons.arrow_forward,
-                    color: Color(0xFFFF7A20),
-                    size: 15,
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 12),
-
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: ElevatedButton(
-              onPressed: () async {
-                final result = await showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  backgroundColor: Colors.transparent,
-                  builder: (_) => PostulationFormSheet(serviceId: mission.id),
-                );
-
-                if (result == true) {
-                  await _markAsPostulated(mission.id);
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFF7A20),
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Postularme a esta misión',
-                    style: GoogleFonts.montserrat(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF0F172A),
                       fontSize: 14,
+                      fontWeight: FontWeight.w700,
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  const Icon(
-                    Icons.rocket_launch,
-                    color: Colors.white,
-                    size: 18,
                   ),
                 ],
               ),
+
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.calendar_today_outlined,
+                  color: Color(0xFFFF7A20),
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  _formatAvailability(mission),
+                  style: GoogleFonts.montserrat(
+                    color: const Color(0xFF64748B),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 20),
+
+        SizedBox(
+          width: double.infinity,
+          height: 46,
+          child: OutlinedButton(
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => MissionDetailScreen(mission: mission),
+                ),
+              );
+
+              if (result == true) {
+                await _markAsPostulated(mission.id);
+              }
+            },
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: Color(0xFFFF7A20)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'Detalles de la Misión',
+                  style: GoogleFonts.montserrat(
+                    color: const Color(0xFFFF7A20),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const Icon(
+                  Icons.arrow_forward,
+                  color: Color(0xFFFF7A20),
+                  size: 15,
+                ),
+              ],
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+
+        const SizedBox(height: 12),
+
+        SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: ElevatedButton(
+            onPressed: () async {
+              final result = await showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (_) => PostulationFormSheet(serviceId: mission.id),
+              );
+
+              if (result == true) {
+                await _markAsPostulated(mission.id);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF7A20),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'Postularme a esta misión',
+                  style: GoogleFonts.montserrat(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(
+                  Icons.rocket_launch,
+                  color: Colors.white,
+                  size: 18,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
   String _statusText(String status) {
     switch (status) {
