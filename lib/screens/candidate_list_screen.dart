@@ -385,7 +385,7 @@ class _CandidateListScreenState extends State<CandidateListScreen> {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const ChatRoomsPage()),
+                MaterialPageRoute(builder: (_) => const ChatRoomsPage(role: 'client')),
               );
             },
           ),

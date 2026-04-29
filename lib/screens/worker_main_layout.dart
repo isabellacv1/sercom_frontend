@@ -19,7 +19,7 @@ class _WorkerMainLayoutState extends State<WorkerMainLayout> {
   final List<Widget> _pages = [
     const WorkerHomeScreen(),
     const PostulationsScreen(),
-    const ChatRoomsPage(),
+    const ChatRoomsPage(role: 'worker'),
     const ProfilePage(),
   ];
 

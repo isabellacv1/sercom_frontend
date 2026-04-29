@@ -189,7 +189,7 @@ class _HomePageState extends State<HomePage> {
                       children: [
                         _buildHomeContent(),
                         const MissionsPage(),
-                        const ChatRoomsPage(),
+                        const ChatRoomsPage(role: 'client'),
                         const ProfilePage(),
                       ],
                     ),
