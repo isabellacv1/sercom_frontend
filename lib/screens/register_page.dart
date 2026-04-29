@@ -55,10 +55,10 @@ class _RegisterPageState extends State<RegisterPage> {
     final address = addressController.text.trim();
     final specialty = specialtyController.text.trim();
 
-    if (fullName.isEmpty || email.isEmpty || password.isEmpty) {
+    if (fullName.isEmpty || email.isEmpty || password.isEmpty || phone.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Completa nombre, correo y contraseña'),
+          content: Text('Completa nombre, correo, teléfono y contraseña'),
         ),
       );
       return;
@@ -93,13 +93,13 @@ class _RegisterPageState extends State<RegisterPage> {
         fullName: fullName,
         email: email,
         password: password,
-        roles: [widget.role],
-        activeRole: widget.role,
+        role: widget.role,
         cedula: isWorker ? cedula : null,
         phone: isWorker ? phone : null,
         address: isWorker ? address : null,
         specialty: isWorker ? specialty : null,
       );
+      
 
       if (!mounted) return;
 
@@ -304,6 +304,23 @@ class _RegisterPageState extends State<RegisterPage> {
                     color: textSoft,
                   ),
                 ),
+              ),
+              const SizedBox(height: 28),
+              const Text(
+                'Teléfono',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: textDark,
+                ),
+              ),
+              const SizedBox(height: 12),
+              _CustomInput(
+                controller: phoneController,
+                hintText: 'Ingresa tu teléfono',
+                prefixIcon: Icons.phone_rounded,
+                keyboardType: TextInputType.phone,
+                accentColor: accentColor,
               ),
               if (isWorker) ...[
                 const SizedBox(height: 28),
