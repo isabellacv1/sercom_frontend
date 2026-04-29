@@ -58,7 +58,7 @@ class _LoginPageState extends State<LoginPage> {
 
       Navigator.pushNamedAndRemoveUntil(
         context,
-        '/home',
+        '/',
         (route) => false,
       );
     } on DioException catch (e) {

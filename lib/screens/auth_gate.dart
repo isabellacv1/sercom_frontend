@@ -4,6 +4,7 @@ import 'home_page.dart';
 import 'worker_main_layout.dart';
 import 'login_page.dart';
 import '../services/auth_service.dart';
+import 'worker_home_screen.dart';
 
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
