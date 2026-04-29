@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'core/supabase_client.dart';
 import 'screens/auth_gate.dart';
 import 'screens/login_page.dart';
 import 'screens/register_page.dart';
@@ -12,11 +12,14 @@ import 'screens/match_confirmation_screen.dart';
 import 'screens/technician_profile_screen.dart';
 import 'screens/role_selection_page.dart';
 import 'screens/map_picker_page.dart';
+import 'screens/service_confirmation_page.dart';
+import 'screens/review_screen.dart';
 
 import 'models/technician.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await SupabaseConfig.initialize();
   runApp(const MyApp());
 }
 
@@ -37,6 +40,9 @@ class MyApp extends StatelessWidget {
         '/mission-dispatch': (context) => const MissionDispatchPage(),
         '/missions': (context) => const MissionsPage(),
         '/map-picker': (context) => const MapPickerPage(),
+        '/review': (context) => ReviewScreen(
+          serviceId: ModalRoute.of(context)!.settings.arguments as String? ?? '',
+        ),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/register') {
@@ -63,6 +69,23 @@ class MyApp extends StatelessWidget {
           return MaterialPageRoute(
             builder: (_) => MatchConfirmationScreen(
               technician: technician,
+            ),
+          );
+        }
+
+        if (settings.name == '/service-confirmation') {
+          final args = settings.arguments as Map<String, dynamic>;
+          return MaterialPageRoute(
+            builder: (_) => ServiceConfirmationPage(
+              serviceId: args['serviceId'] as String,
+              isWorker: args['isWorker'] as bool? ?? false,
+              workerName: args['workerName'] as String?,
+              workerPhotoUrl: args['workerPhotoUrl'] as String?,
+              workerRating: args['workerRating'] as double?,
+              workerReviewCount: args['workerReviewCount'] as int?,
+              totalCost: args['totalCost'] as num?,
+              scheduledAt: args['scheduledAt'] as String?,
+              serviceTitle: args['serviceTitle'] as String?,
             ),
           );
         }
