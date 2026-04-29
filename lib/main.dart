@@ -13,6 +13,7 @@ import 'screens/technician_profile_screen.dart';
 import 'screens/role_selection_page.dart';
 import 'screens/map_picker_page.dart';
 import 'screens/chat_rooms_page.dart';
+import 'screens/personal_info_page.dart';
 
 import 'models/technician.dart';
 
@@ -39,6 +40,7 @@ class MyApp extends StatelessWidget {
         '/missions': (context) => const MissionsPage(),
         '/map-picker': (context) => const MapPickerPage(),
         '/chat-rooms': (context) => const ChatRoomsPage(),
+        '/personal-info': (context) => const PersonalInfoPage(),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/register') {
