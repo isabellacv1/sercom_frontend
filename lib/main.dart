@@ -16,7 +16,7 @@ import 'screens/service_confirmation_page.dart';
 import 'screens/review_screen.dart';
 import 'screens/chat_rooms_page.dart';
 import 'screens/personal_info_page.dart';
-
+import 'screens/worker_home_screen.dart';
 import 'models/technician.dart';
 
 Future<void> main() async {
@@ -45,6 +45,7 @@ class MyApp extends StatelessWidget {
         '/review': (context) => ReviewScreen(
           serviceId: ModalRoute.of(context)!.settings.arguments as String? ?? '',
         ),
+        '/workerHome': (context) => const WorkerHomeScreen(),
         '/chat-rooms': (context) => const ChatRoomsPage(),
         '/personal-info': (context) => const PersonalInfoPage(),
       },

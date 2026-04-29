@@ -82,7 +82,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _switchRole() async {
-    final newRole = _userRole == 'technician' ? 'client' : 'technician';
+    final newRole = _userRole == 'worker' ? 'client' : 'worker';
 
     showDialog(
       context: context,
@@ -103,7 +103,7 @@ class _ProfilePageState extends State<ProfilePage> {
         context,
         MaterialPageRoute(
           builder: (context) {
-            return newRole == 'technician'
+            return newRole == 'worker'
                 ? const WorkerMainLayout()
                 : const HomePage();
           },
@@ -150,7 +150,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    final isWorker = _userRole == 'technician';
+    final isWorker = _userRole == 'worker';
 
     final mainColor =
         isWorker ? const Color(0xFFFF7A20) : const Color(0xFF2563EB);
