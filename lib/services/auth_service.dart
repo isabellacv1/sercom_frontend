@@ -132,6 +132,27 @@ Future<dynamic> register({
 
   return response.data;
 }
+Future<String?> getUserPhotoUrl() async {
+  final prefs = await SharedPreferences.getInstance();
+  final photoUrl = prefs.getString('profilePhotoUrl');
+
+  if (photoUrl != null && photoUrl.trim().isNotEmpty) {
+    return photoUrl.trim();
+  }
+
+  final profile = await getCurrentProfile();
+
+  if (profile == null) return null;
+
+  final extractedPhotoUrl = _extractProfilePhotoUrl(profile);
+
+  if (extractedPhotoUrl != null && extractedPhotoUrl.trim().isNotEmpty) {
+    await prefs.setString('profilePhotoUrl', extractedPhotoUrl.trim());
+    return extractedPhotoUrl.trim();
+  }
+
+  return null;
+}
 
   Future<void> switchRole(String newRole) async {
     try {
@@ -269,6 +290,7 @@ Future<dynamic> register({
     await prefs.remove('bio');
     await prefs.remove('cedula');
     await prefs.remove('specialty');
+    await prefs.remove('profilePhotoUrl');
   }
 
   Future<String?> getToken() async {
@@ -494,6 +516,31 @@ Future<dynamic> register({
     if (specialty != null) {
       await prefs.setString('specialty', specialty.toString());
     }
+    final profilePhotoUrl = _extractProfilePhotoUrl(profile);
+
+  if (profilePhotoUrl != null && profilePhotoUrl.trim().isNotEmpty) {
+    await prefs.setString('profilePhotoUrl', profilePhotoUrl.trim());
+  }
+  }
+  String? _extractProfilePhotoUrl(dynamic profile) {
+    if (profile is! Map) return null;
+
+    final value = profile['profile_photo_url'] ??
+        profile['profilePhotoUrl'] ??
+        profile['photo_url'] ??
+        profile['photoUrl'] ??
+        profile['avatar_url'] ??
+        profile['avatarUrl'] ??
+        profile['worker_photo_url'] ??
+        profile['workerPhotoUrl'];
+
+    if (value == null) return null;
+
+    final url = value.toString().trim();
+
+    if (url.isEmpty) return null;
+
+    return url;
   }
 
   String? _decodeUserIdFromToken(String? token) {

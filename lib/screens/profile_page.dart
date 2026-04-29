@@ -21,6 +21,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   String _userName = 'Cargando...';
   String _userRole = 'client';
+  String? _profilePhotoUrl;
 
   int _totalMissions = 0;
   int _finishedMissions = 0;
@@ -35,51 +36,56 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _loadProfileData() async {
-    try {
-      final name = await _authService.getUserName() ?? 'Usuario';
-      final role = await _authService.getUserRole() ?? 'client';
+  try {
+    await _authService.getCurrentProfile();
 
-      final missions = await _missionService.getMyMissions();
+    final name = await _authService.getUserName() ?? 'Usuario';
+    final role = await _authService.getUserRole() ?? 'client';
+    final photoUrl = await _authService.getUserPhotoUrl();
 
-      final finishedMissions = missions.where((mission) {
-        final status = mission.status.toLowerCase();
+    final missions = await _missionService.getMyMissions();
 
-        return status == 'finalizado' ||
-            status == 'finalizada' ||
-            status == 'finished' ||
-            status == 'completed';
-      }).length;
+    final finishedMissions = missions.where((mission) {
+      final status = mission.status.toLowerCase();
 
-      if (!mounted) return;
+      return status == 'finalizado' ||
+          status == 'finalizada' ||
+          status == 'finished' ||
+          status == 'completed';
+    }).length;
 
-      setState(() {
-        _userName = name;
-        _userRole = role;
-        _totalMissions = missions.length;
-        _finishedMissions = finishedMissions;
-        _ranking = 0.0;
-        _isLoadingProfile = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
+    if (!mounted) return;
 
-      setState(() {
-        _userName = 'Usuario';
-        _userRole = 'client';
-        _totalMissions = 0;
-        _finishedMissions = 0;
-        _ranking = 0.0;
-        _isLoadingProfile = false;
-      });
+    setState(() {
+      _userName = name;
+      _userRole = role;
+      _profilePhotoUrl = photoUrl;
+      _totalMissions = missions.length;
+      _finishedMissions = finishedMissions;
+      _ranking = 0.0;
+      _isLoadingProfile = false;
+    });
+  } catch (e) {
+    if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error cargando perfil: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+    setState(() {
+      _userName = 'Usuario';
+      _userRole = 'client';
+      _profilePhotoUrl = null;
+      _totalMissions = 0;
+      _finishedMissions = 0;
+      _ranking = 0.0;
+      _isLoadingProfile = false;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Error cargando perfil: $e'),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
+}
 
   Future<void> _switchRole() async {
     final newRole = _userRole == 'worker' ? 'client' : 'worker';
@@ -188,15 +194,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   child: Column(
                     children: [
-                      const CircleAvatar(
-                        radius: 50,
-                        backgroundColor: Colors.white,
-                        child: Icon(
-                          Icons.person,
-                          size: 50,
-                          color: Colors.grey,
-                        ),
-                      ),
+                      _buildProfileAvatar(),
                       const SizedBox(height: 16),
                       Text(
                         _userName,
@@ -391,6 +389,53 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
     );
   }
+  Widget _buildProfileAvatar() {
+  final hasPhoto =
+      _profilePhotoUrl != null && _profilePhotoUrl!.trim().isNotEmpty;
+
+  return Container(
+    width: 104,
+    height: 104,
+    decoration: const BoxDecoration(
+      shape: BoxShape.circle,
+      color: Colors.white,
+    ),
+    child: ClipOval(
+      child: hasPhoto
+          ? Image.network(
+              _profilePhotoUrl!.trim(),
+              width: 104,
+              height: 104,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+
+                return const Center(
+                  child: SizedBox(
+                    width: 28,
+                    height: 28,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                    ),
+                  ),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return const Icon(
+                  Icons.person,
+                  size: 52,
+                  color: Colors.grey,
+                );
+              },
+            )
+          : const Icon(
+              Icons.person,
+              size: 52,
+              color: Colors.grey,
+            ),
+    ),
+  );
+}
 
   Widget _buildStatBlock(String value, String label) {
     return Container(
@@ -423,6 +468,7 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
   }
+  
 
   Widget _buildAccountOption(
     IconData icon,

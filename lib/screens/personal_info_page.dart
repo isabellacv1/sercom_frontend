@@ -26,6 +26,7 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
   bool _isEditing = false;
 
   String _userRole = 'client';
+  String? _profilePhotoUrl;
 
   @override
   void initState() {
@@ -43,6 +44,7 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
       final address = await _authService.getUserAddress() ?? '';
       final city = await _authService.getUserCity() ?? '';
       final bio = await _authService.getUserBio() ?? '';
+      final photoUrl = await _authService.getUserPhotoUrl();
 
       if (!mounted) return;
 
@@ -55,6 +57,7 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
         _bioController.text = bio;
         _userRole = role;
         _isLoading = false;
+        _profilePhotoUrl = photoUrl;
       });
     } catch (e) {
       if (!mounted) return;
@@ -130,7 +133,7 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isWorker = _userRole == 'technician';
+    final isWorker = _userRole == 'worker';
 
     final mainColor =
         isWorker ? const Color(0xFFFF7A20) : const Color(0xFF2563EB);
@@ -197,15 +200,7 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
                     child: Column(
                       children: [
                         const SizedBox(height: 8),
-                        const CircleAvatar(
-                          radius: 48,
-                          backgroundColor: Colors.white,
-                          child: Icon(
-                            Icons.person,
-                            size: 48,
-                            color: Colors.grey,
-                          ),
-                        ),
+                        _buildProfileAvatar(),
                         const SizedBox(height: 16),
                         Text(
                           _nameController.text.isEmpty
@@ -396,6 +391,53 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
             ),
     );
   }
+  Widget _buildProfileAvatar() {
+  final hasPhoto =
+      _profilePhotoUrl != null && _profilePhotoUrl!.trim().isNotEmpty;
+
+  return Container(
+    width: 96,
+    height: 96,
+    decoration: const BoxDecoration(
+      shape: BoxShape.circle,
+      color: Colors.white,
+    ),
+    child: ClipOval(
+      child: hasPhoto
+          ? Image.network(
+              _profilePhotoUrl!.trim(),
+              width: 96,
+              height: 96,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+
+                return const Center(
+                  child: SizedBox(
+                    width: 26,
+                    height: 26,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                    ),
+                  ),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return const Icon(
+                  Icons.person,
+                  size: 48,
+                  color: Colors.grey,
+                );
+              },
+            )
+          : const Icon(
+              Icons.person,
+              size: 48,
+              color: Colors.grey,
+            ),
+    ),
+  );
+}
 
   Widget _buildInput({
     required TextEditingController controller,
