@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shimmer/shimmer.dart';
@@ -20,12 +23,23 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
   String? _userName;
   final _missionService = MissionService();
   Set<String> _postulatedMissions = {};
+  List<MissionModel> _cachedNearbyMissions = [];
+  int _newNearbyNotifications = 0;
+  final List<MissionModel> _notificationMissions = [];
+  Timer? _pollingTimer;
 
   @override
   void initState() {
     super.initState();
     _loadUser();
     _loadPostulatedMissions();
+    _startNearbyPolling();
+  }
+
+  @override
+  void dispose() {
+    _pollingTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadUser() async {
@@ -81,6 +95,214 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
     return missions.where(_isPostulable).toList();
   }
 
+  Future<List<MissionModel>> _loadNearbyMissions({
+    bool notifyForNew = false,
+  }) async {
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      throw Exception('Activa la ubicación para ver solicitudes cercanas.');
+    }
+
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      throw Exception('Permite la ubicación para cargar oportunidades cercanas.');
+    }
+
+    final position = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+
+    final missions = _filterPostulableMissions(
+      await _missionService.getNearbyOpportunities(
+        latitude: position.latitude,
+        longitude: position.longitude,
+      ),
+    );
+
+    if (notifyForNew) {
+      final oldIds = _cachedNearbyMissions.map((m) => m.id).toSet();
+      final newMissions = missions.where((m) => !oldIds.contains(m.id)).toList();
+      final newCount = newMissions.length;
+      if (newCount > 0 && mounted) {
+        setState(() {
+          _newNearbyNotifications += newCount;
+          final existingIds = _notificationMissions.map((m) => m.id).toSet();
+          for (final mission in newMissions.reversed) {
+            if (!existingIds.contains(mission.id)) {
+              _notificationMissions.insert(0, mission);
+            }
+          }
+          if (_notificationMissions.length > 20) {
+            _notificationMissions.removeRange(20, _notificationMissions.length);
+          }
+        });
+      }
+    }
+
+    _cachedNearbyMissions = missions;
+    return missions;
+  }
+
+  void _startNearbyPolling() {
+    _pollingTimer = Timer.periodic(const Duration(seconds: 45), (_) async {
+      if (!mounted) return;
+      try {
+        await _loadNearbyMissions(notifyForNew: true);
+        if (mounted) setState(() {});
+      } catch (_) {
+        // El polling no debe interrumpir la UI si falla la ubicación/API.
+      }
+    });
+  }
+
+  Future<void> _openNotificationsSheet() async {
+    final items = List<MissionModel>.from(_notificationMissions);
+
+    setState(() {
+      _newNearbyNotifications = 0;
+    });
+
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) {
+        if (items.isEmpty) {
+          return SizedBox(
+            height: 280,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.notifications_none_rounded,
+                    color: Color(0xFF94A3B8),
+                    size: 46,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'No tienes notificaciones nuevas',
+                    style: GoogleFonts.montserrat(
+                      color: const Color(0xFF64748B),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return SafeArea(
+          child: SizedBox(
+            height: 430,
+            child: Column(
+              children: [
+                const SizedBox(height: 10),
+                Container(
+                  width: 48,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE2E8F0),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    children: [
+                      Text(
+                        'Notificaciones',
+                        style: GoogleFonts.montserrat(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF0F172A),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                    itemCount: items.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final mission = items[index];
+                      return Material(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(14),
+                        child: ListTile(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          leading: const CircleAvatar(
+                            backgroundColor: Color(0xFFFFF7ED),
+                            child: Icon(
+                              Icons.work_outline_rounded,
+                              color: Color(0xFFFF7A20),
+                            ),
+                          ),
+                          title: Text(
+                            mission.serviceTitle ?? 'Nueva solicitud cercana',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.montserrat(
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF0F172A),
+                              fontSize: 13,
+                            ),
+                          ),
+                          subtitle: Text(
+                            '${_formatLocation(mission)} • ${_formatAvailability(mission)}',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.montserrat(
+                              color: const Color(0xFF64748B),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          trailing: const Icon(
+                            Icons.chevron_right_rounded,
+                            color: Color(0xFF94A3B8),
+                          ),
+                          onTap: () async {
+                            Navigator.pop(context);
+                            final result = await Navigator.push(
+                              this.context,
+                              MaterialPageRoute(
+                                builder: (_) => MissionDetailScreen(mission: mission),
+                              ),
+                            );
+                            if (result == true) {
+                              await _markAsPostulated(mission.id);
+                            }
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -113,19 +335,36 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
                   fontSize: 28,
                 ),
               ),
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                ),
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.notifications_none,
-                    color: Color(0xFF0F172A),
+              Stack(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.notifications_none,
+                        color: Color(0xFF0F172A),
+                      ),
+                      onPressed: _openNotificationsSheet,
+                    ),
                   ),
-                  onPressed: () {},
-                ),
+                  if (_newNearbyNotifications > 0)
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Container(
+                        width: 10,
+                        height: 10,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFFF7A20),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ],
           ),
@@ -159,7 +398,7 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
 
   Widget _buildMissionsList() {
     return FutureBuilder<List<MissionModel>>(
-      future: _missionService.getMissionsByStatus('active'),
+      future: _loadNearbyMissions(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return ListView(
@@ -191,8 +430,7 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
           );
         }
 
-        final allMissions = snapshot.data ?? [];
-        final missions = _filterPostulableMissions(allMissions);
+        final missions = snapshot.data ?? [];
 
         if (missions.isEmpty) {
           return ListView(
@@ -226,8 +464,9 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
 
         return RefreshIndicator(
           onRefresh: () async {
-            setState(() {});
+            await _loadNearbyMissions(notifyForNew: true);
             await _loadPostulatedMissions();
+            if (mounted) setState(() {});
           },
           child: ListView.builder(
             padding: const EdgeInsets.only(bottom: 24),
@@ -490,6 +729,25 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
                     ),
                   ],
                 ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.calendar_today_outlined,
+                    color: Color(0xFFFF7A20),
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _formatAvailability(mission),
+                    style: GoogleFonts.montserrat(
+                      color: const Color(0xFF64748B),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
 
@@ -623,5 +881,14 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
     }
 
     return address;
+  }
+
+  String _formatAvailability(MissionModel mission) {
+    return formatAvailabilityLabel(
+      date: mission.scheduledDate ?? mission.scheduledAt,
+      from: mission.scheduledFrom,
+      to: mission.scheduledTo,
+      fallback: 'Fecha por confirmar',
+    );
   }
 }

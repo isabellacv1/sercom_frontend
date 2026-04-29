@@ -56,32 +56,32 @@ class AuthService {
     return data;
   }
 
-Future<dynamic> register({
-  required String fullName,
-  required String email,
-  required String password,
-  required String role,
-  String? cedula,
-  String? phone,
-  String? address,
-  String? city,
-  String? bio,
-  String? specialty,
-  PlatformFile? cedulaDocument,
-  PlatformFile? workerPhoto,
-}) async {
-  final fields = <String, dynamic>{
-    'fullName': fullName,
-    'email': email,
-    'password': password,
-    'role': role,
-    'cedula': cedula,
-    'phone': phone,
-    'address': address,
-    'city': city,
-    'bio': bio,
-    'specialty': specialty,
-  };
+  Future<dynamic> register({
+    required String fullName,
+    required String email,
+    required String password,
+    required String role,
+    String? cedula,
+    String? phone,
+    String? address,
+    String? city,
+    String? bio,
+    String? specialty,
+    PlatformFile? cedulaDocument,
+    PlatformFile? workerPhoto,
+  }) async {
+    final fields = <String, dynamic>{
+      'fullName': fullName,
+      'email': email,
+      'password': password,
+      'role': role,
+      'cedula': cedula,
+      'phone': phone,
+      'address': address,
+      'city': city,
+      'bio': bio,
+      'specialty': specialty,
+    };
 
   fields.removeWhere((key, value) {
     if (value == null) return true;
