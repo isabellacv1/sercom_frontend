@@ -5,6 +5,37 @@ import '../models/mission_model.dart';
 class MissionService {
   final api = ApiClient().dio;
 
+Future<List<MissionModel>> getAvailableOpportunities({
+  int page = 1,
+  int limit = 20,
+}) async {
+  final response = await api.get(
+    '/services/opportunities',
+    queryParameters: {
+      'page': page,
+      'limit': limit,
+    },
+  );
+
+  final data = response.data;
+
+  if (data is Map<String, dynamic> && data['data'] is List) {
+    return (data['data'] as List)
+        .whereType<Map<String, dynamic>>()
+        .map(MissionModel.fromJson)
+        .toList();
+  }
+
+  if (data is List) {
+    return data
+        .whereType<Map<String, dynamic>>()
+        .map(MissionModel.fromJson)
+        .toList();
+  }
+
+  throw Exception('Respuesta inválida al consultar oportunidades');
+}
+
   Future<MissionModel> createMission({
     required String categoryId,
     required String serviceOptionId,
