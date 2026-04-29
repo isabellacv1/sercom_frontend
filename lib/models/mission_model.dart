@@ -47,6 +47,17 @@ class MissionModel {
 
   factory MissionModel.fromJson(Map<String, dynamic> json) {
     final normalizedStatus = MissionStatus.normalize(json['status']?.toString());
+    final category = json['category'];
+    final serviceOption = json['service_option'] ?? json['serviceOption'];
+
+    final categoryName = json['category_name']?.toString() ??
+        (category is Map ? category['name']?.toString() : null);
+
+    final serviceTitle = (serviceOption is Map
+            ? serviceOption['title']?.toString()
+            : null) ??
+        json['service_title']?.toString() ??
+        json['title']?.toString();
 
     return MissionModel(
       id: json['id']?.toString() ?? '',
@@ -57,12 +68,8 @@ class MissionModel {
       minBudget: json['min_budget'] ?? json['budget_min'],
       maxBudget: json['max_budget'] ?? json['budget_max'],
 
-      serviceTitle: json['service_title']?.toString() ??
-          json['title']?.toString() ??
-          json['serviceOption']?['title']?.toString(),
-
-      categoryName: json['category_name']?.toString() ??
-          json['category']?['name']?.toString(),
+      serviceTitle: serviceTitle,
+      categoryName: categoryName,
 
       nearbyTechnicians: json['nearby_technicians'] ?? 0,
       offerCount: json['offer_count'],
