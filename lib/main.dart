@@ -47,7 +47,6 @@ class MyApp extends StatelessWidget {
         ),
         '/chat-rooms': (context) => const ChatRoomsPage(),
         '/personal-info': (context) => const PersonalInfoPage(),
-
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/register') {
