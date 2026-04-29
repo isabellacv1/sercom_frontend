@@ -1,23 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../core/display_formatters.dart';
 import '../services/auth_service.dart';
 import '../services/confirmation_service.dart';
+import '../services/mission_service.dart';
 import 'review_screen.dart';
 
-
-
-/// ServiceConfirmationPage – HU-10
+/// ServiceConfirmationPage – seguimiento + confirmación
 ///
-/// Plug & Play: pásale el [serviceId], el [isWorker] flag y, si es vista
-/// de Cliente, opcionalmente los datos del Trabajador ([workerName],
-/// [workerPhotoUrl], [workerRating], [workerReviewCount], [totalCost]).
+/// Estados soportados según DB:
+/// - requested
+/// - assigned
+/// - on_the_way
+/// - in_progress
+/// - completed
+/// - cancelled
+/// - draft
 class ServiceConfirmationPage extends StatefulWidget {
   final String serviceId;
   final bool isWorker;
 
-  // Datos del otro participante — los pasa quien navega a esta pantalla.
   final String? workerName;
   final String? workerPhotoUrl;
   final double? workerRating;
@@ -47,18 +51,56 @@ class ServiceConfirmationPage extends StatefulWidget {
 class _ServiceConfirmationPageState extends State<ServiceConfirmationPage> {
   final _confirmationService = ConfirmationService();
   final _authService = AuthService();
+  final _missionService = MissionService();
 
   bool _isLoading = false;
-  bool _hasConfirmed = false;  // confiramción local optimista
+  bool _hasConfirmed = false;
+  bool _isUpdatingStatus = false;
 
   String? _currentUserName;
-  // Supabase stream subscription
+  String? _localStatusOverride;
+
   late final Stream<List<Map<String, dynamic>>> _serviceStream;
+
+  static const Set<String> _workerEditableStatuses = {
+    'on_the_way',
+    'in_progress',
+    'completed',
+  };
+
+  final List<_ServiceStatusStep> _statusSteps = const [
+    _ServiceStatusStep(
+      value: 'requested',
+      label: 'Solicitado',
+      icon: Icons.assignment_outlined,
+    ),
+    _ServiceStatusStep(
+      value: 'assigned',
+      label: 'Asignado',
+      icon: Icons.person_pin_circle_outlined,
+    ),
+    _ServiceStatusStep(
+      value: 'on_the_way',
+      label: 'En camino',
+      icon: Icons.directions_car_filled_outlined,
+    ),
+    _ServiceStatusStep(
+      value: 'in_progress',
+      label: 'En ejecución',
+      icon: Icons.handyman_outlined,
+    ),
+    _ServiceStatusStep(
+      value: 'completed',
+      label: 'Finalizado',
+      icon: Icons.check_circle_outline,
+    ),
+  ];
 
   @override
   void initState() {
     super.initState();
     _loadCurrentUser();
+
     _serviceStream = Supabase.instance.client
         .from('services')
         .stream(primaryKey: ['id'])
@@ -67,13 +109,281 @@ class _ServiceConfirmationPageState extends State<ServiceConfirmationPage> {
 
   Future<void> _loadCurrentUser() async {
     final name = await _authService.getUserName();
-    if (mounted) setState(() => _currentUserName = name);
+
+    if (mounted) {
+      setState(() => _currentUserName = name);
+    }
   }
 
-  // ── Confirm action ───────────────────────────────────────────────────────
+ String _normalizeStatus(String? status) {
+  if (status == null || status.trim().isEmpty) {
+    return 'requested';
+  }
+
+  final value = status.trim().toLowerCase();
+
+  switch (value) {
+    case 'requested':
+    case 'solicitado':
+      return 'requested';
+
+    case 'assigned':
+    case 'asignado':
+    case 'accepted':
+    case 'accept':
+    case 'confirmed':
+    case 'confirmado':
+    case 'worker_assigned':
+    case 'technician_assigned':
+    case 'assigned_worker':
+    case 'offer_accepted':
+    case 'accepted_offer':
+      return 'assigned';
+
+    case 'on_the_way':
+    case 'on the way':
+    case 'en_camino':
+    case 'en camino':
+      return 'on_the_way';
+
+    case 'in_progress':
+    case 'in progress':
+    case 'en_ejecucion':
+    case 'en ejecución':
+    case 'en ejecucion':
+      return 'in_progress';
+
+    case 'completed':
+    case 'finished':
+    case 'done':
+    case 'finalizado':
+    case 'finalizada':
+      return 'completed';
+
+    case 'cancelled':
+    case 'canceled':
+    case 'cancelado':
+    case 'cancelada':
+      return 'cancelled';
+
+    case 'draft':
+    case 'borrador':
+      return 'draft';
+
+    default:
+      return 'requested';
+  }
+}
+
+String _deriveStatusFromRow(Map<String, dynamic>? row) {
+  if (row == null) {
+    return _normalizeStatus(_localStatusOverride);
+  }
+
+  final dbStatus = _normalizeStatus(row['status']?.toString());
+
+  if (dbStatus != 'requested') {
+    return dbStatus;
+  }
+
+  final hasAssignedWorker =
+      row['worker_id'] != null ||
+      row['technician_id'] != null ||
+      row['assigned_worker_id'] != null ||
+      row['worker_profile_id'] != null ||
+      row['accepted_offer_id'] != null ||
+      row['selected_offer_id'] != null ||
+      row['offer_id'] != null;
+
+  if (hasAssignedWorker) {
+    return 'assigned';
+  }
+
+  return dbStatus;
+}
+
+String _resolveLiveStatus(Map<String, dynamic>? row) {
+  final dbStatus = _deriveStatusFromRow(row);
+
+  if (_localStatusOverride == null) {
+    return dbStatus;
+  }
+
+  final localStatus = _normalizeStatus(_localStatusOverride);
+
+  if (_isTerminalStatus(dbStatus)) {
+    return dbStatus;
+  }
+
+  if (_getStatusIndex(localStatus) > _getStatusIndex(dbStatus)) {
+    return localStatus;
+  }
+
+  return dbStatus;
+}
+
+  int _getStatusIndex(String? status) {
+    final normalized = _normalizeStatus(status);
+
+    switch (normalized) {
+      case 'requested':
+        return 0;
+      case 'assigned':
+        return 1;
+      case 'on_the_way':
+        return 2;
+      case 'in_progress':
+        return 3;
+      case 'completed':
+        return 4;
+      default:
+        return 0;
+    }
+  }
+
+  String _getStatusLabel(String? status) {
+    final normalized = _normalizeStatus(status);
+
+    switch (normalized) {
+      case 'requested':
+        return 'Solicitado';
+      case 'assigned':
+        return 'Asignado';
+      case 'on_the_way':
+        return 'En camino';
+      case 'in_progress':
+        return 'En ejecución';
+      case 'completed':
+        return 'Finalizado';
+      case 'cancelled':
+        return 'Cancelado';
+      case 'draft':
+        return 'Borrador';
+      default:
+        return 'Solicitado';
+    }
+  }
+
+  bool _isTerminalStatus(String? status) {
+    final normalized = _normalizeStatus(status);
+
+    return normalized == 'completed' ||
+        normalized == 'cancelled' ||
+        normalized == 'draft';
+  }
+
+  Future<void> _updateServiceStatus(String newStatus) async {
+    if (_isUpdatingStatus) return;
+
+    if (!widget.isWorker) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Solo el trabajador puede actualizar el estado.'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final normalizedStatus = _normalizeStatus(newStatus);
+
+    if (!_workerEditableStatuses.contains(normalizedStatus)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            normalizedStatus == 'assigned'
+                ? 'El estado Asignado se cambia cuando el cliente asigna un trabajador.'
+                : 'Este estado no puede actualizarse desde seguimiento.',
+          ),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isUpdatingStatus = true);
+
+    try {
+      final updatedMission = await _missionService.updateMissionStatus(
+        missionId: widget.serviceId,
+        status: normalizedStatus,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _localStatusOverride = _normalizeStatus(updatedMission.status);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Estado actualizado a: ${_getStatusLabel(updatedMission.status)}',
+          ),
+          backgroundColor: const Color(0xFF10B981),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al actualizar el estado: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isUpdatingStatus = false);
+      }
+    }
+  }
+
+  Future<void> _goToNextStatus(String? currentStatus) async {
+    if (_isTerminalStatus(currentStatus)) return;
+
+    final normalized = _normalizeStatus(currentStatus);
+
+    if (normalized == 'requested') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Primero el cliente debe asignar un trabajador para iniciar el seguimiento.',
+          ),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final currentIndex = _getStatusIndex(normalized);
+
+    if (currentIndex >= _statusSteps.length - 1) return;
+
+    final nextStatus = _statusSteps[currentIndex + 1].value;
+
+    if (nextStatus == 'assigned') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('El estado Asignado no se cambia desde seguimiento.'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    await _updateServiceStatus(nextStatus);
+  }
 
   Future<void> _onConfirm() async {
     if (_isLoading || _hasConfirmed) return;
+
     setState(() => _isLoading = true);
 
     try {
@@ -88,7 +398,8 @@ class _ServiceConfirmationPageState extends State<ServiceConfirmationPage> {
       });
 
       final updatedService = result['service'] as Map<String, dynamic>?;
-      final newStatus = updatedService?['status']?.toString() ?? '';
+      final newStatus = _normalizeStatus(updatedService?['status']?.toString());
+
       if (newStatus == 'completed') {
         _navigateToReview();
       } else {
@@ -112,7 +423,9 @@ class _ServiceConfirmationPageState extends State<ServiceConfirmationPage> {
       }
     } catch (e) {
       if (!mounted) return;
+
       setState(() => _isLoading = false);
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error al confirmar: $e'),
@@ -131,20 +444,22 @@ class _ServiceConfirmationPageState extends State<ServiceConfirmationPage> {
     );
   }
 
-  // ── Build ────────────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<List<Map<String, dynamic>>>(
       stream: _serviceStream,
       builder: (context, snapshot) {
-        final row = snapshot.data?.firstOrNull;
+        final row = snapshot.data != null && snapshot.data!.isNotEmpty
+            ? snapshot.data!.first
+            : null;
 
-        // Auto-navigate when both confirmed (status == 'completed')
-        if (row != null) {
-          final liveStatus = row['status']?.toString() ?? '';
-          if (liveStatus == 'completed') {
-            // Use addPostFrameCallback to avoid calling Navigator during build.
+final liveStatus = _resolveLiveStatus(row);
+
+        if (row != null && liveStatus == 'completed') {
+          final clientConfirmed = row['client_confirmation'] == true;
+          final workerConfirmed = row['worker_confirmation'] == true;
+
+          if (clientConfirmed && workerConfirmed) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) _navigateToReview();
             });
@@ -152,12 +467,13 @@ class _ServiceConfirmationPageState extends State<ServiceConfirmationPage> {
         }
 
         final workerConfirmed = row?['worker_confirmation'] == true;
+        final clientConfirmed = row?['client_confirmation'] == true;
+
         final escrowMsg = row?['escrow_ui_message']?.toString() ??
             'Tu pago siempre se retendrá de forma segura hasta que confirmes que el trabajo fue finalizado satisfactoriamente.';
 
-        // Determine if the current user already confirmed (merge local + live)
         final alreadyConfirmed = _hasConfirmed ||
-            (widget.isWorker ? workerConfirmed : row?['client_confirmation'] == true);
+            (widget.isWorker ? workerConfirmed : clientConfirmed);
 
         return Scaffold(
           backgroundColor: Colors.white,
@@ -165,8 +481,11 @@ class _ServiceConfirmationPageState extends State<ServiceConfirmationPage> {
             backgroundColor: Colors.white,
             elevation: 0,
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                  color: Color(0xFF0F172A), size: 20),
+              icon: const Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: Color(0xFF0F172A),
+                size: 20,
+              ),
               onPressed: () => Navigator.of(context).pop(),
             ),
           ),
@@ -177,14 +496,13 @@ class _ServiceConfirmationPageState extends State<ServiceConfirmationPage> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   const SizedBox(height: 8),
-
-                  // ── Progress illustration ─────────────────────────────
-                  _ProgressIllustration(isWorker: widget.isWorker),
-                  const SizedBox(height: 32),
-
-                  // ── Headline ─────────────────────────────────────────
+                  _ProgressIllustration(
+                    isWorker: widget.isWorker,
+                    currentStatus: liveStatus,
+                  ),
+                  const SizedBox(height: 28),
                   Text(
-                    'Solo nos falta tu\nconfirmación',
+                    'Seguimiento del\nservicio',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.montserrat(
                       fontSize: 26,
@@ -194,12 +512,30 @@ class _ServiceConfirmationPageState extends State<ServiceConfirmationPage> {
                     ),
                   ),
                   const SizedBox(height: 12),
-
-                  // Live sub-headline driven by stream
-                  _buildSubHeadline(workerConfirmed),
-                  const SizedBox(height: 28),
-
-                  // ── Role-specific card ────────────────────────────────
+                  Text(
+                    widget.isWorker
+                        ? 'Actualiza el estado del servicio para que el cliente pueda ver el avance en tiempo real.'
+                        : 'Aquí puedes ver en qué etapa se encuentra tu servicio en todo momento.',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.montserrat(
+                      fontSize: 15,
+                      color: const Color(0xFF64748B),
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  _ServiceTrackingCard(
+                    currentStatus: liveStatus,
+                    statusSteps: _statusSteps,
+                    isWorker: widget.isWorker,
+                    isUpdating: _isUpdatingStatus,
+                    onNextStatus: () => _goToNextStatus(liveStatus),
+                    onSelectStatus: _updateServiceStatus,
+                    getStatusIndex: _getStatusIndex,
+                    getStatusLabel: _getStatusLabel,
+                    isTerminalStatus: _isTerminalStatus,
+                  ),
+                  const SizedBox(height: 24),
                   if (widget.isWorker)
                     _PrestigeCard(userName: _currentUserName)
                   else
@@ -211,61 +547,15 @@ class _ServiceConfirmationPageState extends State<ServiceConfirmationPage> {
                       scheduledAt: widget.scheduledAt,
                       totalCost: widget.totalCost,
                     ),
-
                   const SizedBox(height: 20),
-
-                  // ── Escrow banner (dynamic from stream) ──────────────
                   _EscrowBanner(message: escrowMsg),
-                  const SizedBox(height: 32),
-
-                  // ── Confirm button ────────────────────────────────────
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: alreadyConfirmed ? null : _onConfirm,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2563EB),
-                        disabledBackgroundColor: const Color(0xFF94A3B8),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                      ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  alreadyConfirmed
-                                      ? 'Confirmado ✓'
-                                      : 'Confirmar Trabajo',
-                                  style: GoogleFonts.montserrat(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                if (!alreadyConfirmed) ...[
-                                  const SizedBox(width: 8),
-                                  const Icon(Icons.verified_outlined,
-                                      size: 20),
-                                ],
-                              ],
-                            ),
+                  const SizedBox(height: 28),
+                  if (liveStatus == 'completed') ...[
+                    _buildFinalConfirmationSection(
+                      alreadyConfirmed: alreadyConfirmed,
                     ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  // ── Contact button ───────────────────────────────────
+                    const SizedBox(height: 14),
+                  ],
                   SizedBox(
                     width: double.infinity,
                     height: 50,
@@ -284,7 +574,7 @@ class _ServiceConfirmationPageState extends State<ServiceConfirmationPage> {
                           Text(
                             widget.isWorker
                                 ? 'Contactar al cliente'
-                                : 'Contactar a ${widget.workerName ?? 'Isabella'}',
+                                : 'Contactar a ${widget.workerName ?? 'trabajador'}',
                             style: GoogleFonts.montserrat(
                               fontWeight: FontWeight.w600,
                               fontSize: 14,
@@ -306,75 +596,418 @@ class _ServiceConfirmationPageState extends State<ServiceConfirmationPage> {
     );
   }
 
-  Widget _buildSubHeadline(bool workerConfirmed) {
-    final titlePart = widget.serviceTitle ?? 'luminarias';
-    final namePart =
-        widget.isWorker ? 'el cliente' : (widget.workerName ?? 'Isabella');
-
-    // If the other party already confirmed, update message via stream
-    final dynamic msg;
-    if (workerConfirmed && !widget.isWorker) {
-      msg = RichText(
-        textAlign: TextAlign.center,
-        text: TextSpan(
+  Widget _buildFinalConfirmationSection({
+    required bool alreadyConfirmed,
+  }) {
+    return Column(
+      children: [
+        Text(
+          'El servicio ya está marcado como finalizado. Ahora puedes confirmar para cerrar el proceso.',
+          textAlign: TextAlign.center,
           style: GoogleFonts.montserrat(
-              fontSize: 15, color: const Color(0xFF64748B)),
-          children: [
-            TextSpan(
-              text: widget.workerName ?? 'Isabella',
-              style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF0F172A)),
-            ),
-            TextSpan(
-                text: ' ha finalizado el servicio de $titlePart con éxito.'),
-          ],
+            fontSize: 14,
+            color: const Color(0xFF64748B),
+            height: 1.4,
+          ),
         ),
-      );
-    } else {
-      msg = RichText(
-        textAlign: TextAlign.center,
-        text: TextSpan(
-          style: GoogleFonts.montserrat(
-              fontSize: 15, color: const Color(0xFF64748B)),
-          children: [
-            const TextSpan(text: '¿'),
-            TextSpan(
-              text: namePart,
-              style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF0F172A)),
+        const SizedBox(height: 16),
+        SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: ElevatedButton(
+            onPressed: alreadyConfirmed ? null : _onConfirm,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2563EB),
+              disabledBackgroundColor: const Color(0xFF94A3B8),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
             ),
-            TextSpan(
-                text:
-                    ' ha finalizado el servicio de $titlePart de manera exitosa?'),
-          ],
+            child: _isLoading
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: Colors.white,
+                    ),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        alreadyConfirmed
+                            ? 'Confirmado ✓'
+                            : 'Confirmar Trabajo',
+                        style: GoogleFonts.montserrat(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      if (!alreadyConfirmed) ...[
+                        const SizedBox(width: 8),
+                        const Icon(Icons.verified_outlined, size: 20),
+                      ],
+                    ],
+                  ),
+          ),
         ),
-      );
-    }
-
-    return msg as Widget;
+      ],
+    );
   }
 }
 
-// ─── CHILD WIDGETS ───────────────────────────────────────────────────────────
+class _ServiceStatusStep {
+  final String value;
+  final String label;
+  final IconData icon;
 
-/// Ilustración de progreso con línea y círculo central.
-class _ProgressIllustration extends StatelessWidget {
+  const _ServiceStatusStep({
+    required this.value,
+    required this.label,
+    required this.icon,
+  });
+}
+
+class _ServiceTrackingCard extends StatelessWidget {
+  final String currentStatus;
+  final List<_ServiceStatusStep> statusSteps;
   final bool isWorker;
-  const _ProgressIllustration({required this.isWorker});
+  final bool isUpdating;
+  final VoidCallback onNextStatus;
+  final Future<void> Function(String status) onSelectStatus;
+  final int Function(String? status) getStatusIndex;
+  final String Function(String? status) getStatusLabel;
+  final bool Function(String? status) isTerminalStatus;
+
+  const _ServiceTrackingCard({
+    required this.currentStatus,
+    required this.statusSteps,
+    required this.isWorker,
+    required this.isUpdating,
+    required this.onNextStatus,
+    required this.onSelectStatus,
+    required this.getStatusIndex,
+    required this.getStatusLabel,
+    required this.isTerminalStatus,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final accent = isWorker ? const Color(0xFFF97316) : const Color(0xFF2563EB);
-    final bgLight = isWorker ? const Color(0xFFFFF7ED) : const Color(0xFFEFF6FF);
+    final currentIndex = getStatusIndex(currentStatus);
+    final isCompletedFlow = currentStatus == 'completed';
+    final isSpecialTerminal =
+        currentStatus == 'cancelled' || currentStatus == 'draft';
+
+    final workerEditableSteps = statusSteps
+        .where(
+          (step) =>
+              step.value == 'on_the_way' ||
+              step.value == 'in_progress' ||
+              step.value == 'completed',
+        )
+        .toList();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  _statusIcon(currentStatus),
+                  color: _statusColor(currentStatus),
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Estado actual',
+                      style: GoogleFonts.montserrat(
+                        fontSize: 12,
+                        color: const Color(0xFF64748B),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      getStatusLabel(currentStatus),
+                      style: GoogleFonts.montserrat(
+                        fontSize: 18,
+                        color: const Color(0xFF0F172A),
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 22),
+          if (!isSpecialTerminal) ...[
+            Column(
+              children: List.generate(statusSteps.length, (index) {
+                final step = statusSteps[index];
+                final isCompleted = index <= currentIndex;
+                final isCurrent = index == currentIndex;
+
+                return _TrackingStepItem(
+                  step: step,
+                  isCompleted: isCompleted,
+                  isCurrent: isCurrent,
+                  showLine: index != statusSteps.length - 1,
+                );
+              }),
+            ),
+          ] else ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: currentStatus == 'cancelled'
+                    ? const Color(0xFFFEF2F2)
+                    : const Color(0xFFFFFBEB),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: currentStatus == 'cancelled'
+                      ? const Color(0xFFFECACA)
+                      : const Color(0xFFFDE68A),
+                ),
+              ),
+              child: Text(
+                currentStatus == 'cancelled'
+                    ? 'Este servicio fue cancelado.'
+                    : 'Este servicio está en borrador.',
+                style: GoogleFonts.montserrat(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: currentStatus == 'cancelled'
+                      ? const Color(0xFFB91C1C)
+                      : const Color(0xFF92400E),
+                ),
+              ),
+            ),
+          ],
+          if (isWorker && !isSpecialTerminal) ...[
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: isCompletedFlow || isUpdating ? null : onNextStatus,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2563EB),
+                  disabledBackgroundColor: const Color(0xFF94A3B8),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: isUpdating
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(
+                        isCompletedFlow
+                            ? 'Servicio finalizado'
+                            : 'Avanzar estado',
+                        style: GoogleFonts.montserrat(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
+                      ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: workerEditableSteps.map((step) {
+                final selected = step.value == currentStatus;
+                final stepIndex = getStatusIndex(step.value);
+                final canSelect = !isUpdating &&
+                    !selected &&
+                    !isCompletedFlow &&
+                    stepIndex == currentIndex + 1;
+
+                return ChoiceChip(
+                  selected: selected,
+                  label: Text(
+                    step.label,
+                    style: GoogleFonts.montserrat(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color:
+                          selected ? Colors.white : const Color(0xFF334155),
+                    ),
+                  ),
+                  selectedColor: const Color(0xFF2563EB),
+                  backgroundColor: Colors.white,
+                  disabledColor: const Color(0xFFF1F5F9),
+                  side: const BorderSide(color: Color(0xFFE2E8F0)),
+                  onSelected: canSelect ? (_) => onSelectStatus(step.value) : null,
+                );
+              }).toList(),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  static IconData _statusIcon(String? status) {
+    switch (status) {
+      case 'requested':
+        return Icons.assignment_outlined;
+      case 'assigned':
+        return Icons.person_pin_circle_outlined;
+      case 'on_the_way':
+        return Icons.directions_car_filled_outlined;
+      case 'in_progress':
+        return Icons.handyman_outlined;
+      case 'completed':
+        return Icons.check_circle_outline;
+      case 'cancelled':
+        return Icons.cancel_outlined;
+      case 'draft':
+        return Icons.edit_note_outlined;
+      default:
+        return Icons.assignment_outlined;
+    }
+  }
+
+  static Color _statusColor(String? status) {
+    switch (status) {
+      case 'cancelled':
+        return const Color(0xFFDC2626);
+      case 'draft':
+        return const Color(0xFFD97706);
+      default:
+        return const Color(0xFF2563EB);
+    }
+  }
+}
+
+class _TrackingStepItem extends StatelessWidget {
+  final _ServiceStatusStep step;
+  final bool isCompleted;
+  final bool isCurrent;
+  final bool showLine;
+
+  const _TrackingStepItem({
+    required this.step,
+    required this.isCompleted,
+    required this.isCurrent,
+    required this.showLine,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color =
+        isCompleted ? const Color(0xFF2563EB) : const Color(0xFFCBD5E1);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Column(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: isCompleted ? const Color(0xFF2563EB) : Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: color, width: 2),
+              ),
+              child: Icon(
+                isCompleted ? Icons.check_rounded : step.icon,
+                color: isCompleted ? Colors.white : const Color(0xFF94A3B8),
+                size: 18,
+              ),
+            ),
+            if (showLine)
+              Container(
+                width: 2,
+                height: 34,
+                color: color.withOpacity(0.4),
+              ),
+          ],
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              step.label,
+              style: GoogleFonts.montserrat(
+                fontSize: 14,
+                fontWeight: isCurrent ? FontWeight.w800 : FontWeight.w600,
+                color: isCompleted
+                    ? const Color(0xFF0F172A)
+                    : const Color(0xFF94A3B8),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ProgressIllustration extends StatelessWidget {
+  final bool isWorker;
+  final String currentStatus;
+
+  const _ProgressIllustration({
+    required this.isWorker,
+    required this.currentStatus,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = currentStatus == 'cancelled'
+        ? const Color(0xFFDC2626)
+        : isWorker
+            ? const Color(0xFFF97316)
+            : const Color(0xFF2563EB);
+
+    final bgLight = currentStatus == 'cancelled'
+        ? const Color(0xFFFEF2F2)
+        : isWorker
+            ? const Color(0xFFFFF7ED)
+            : const Color(0xFFEFF6FF);
 
     return SizedBox(
       height: 180,
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Outer ring
           Container(
             width: 160,
             height: 160,
@@ -383,7 +1016,6 @@ class _ProgressIllustration extends StatelessWidget {
               color: bgLight,
             ),
           ),
-          // Inner ring
           Container(
             width: 110,
             height: 110,
@@ -392,24 +1024,24 @@ class _ProgressIllustration extends StatelessWidget {
               color: accent.withOpacity(0.12),
             ),
           ),
-          // Horizontal accent line
           Positioned(
             left: 0,
             right: 0,
             child: Container(
               height: 4,
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [
-                  Colors.transparent,
-                  accent.withOpacity(0.6),
-                  accent,
-                  accent.withOpacity(0.6),
-                  Colors.transparent,
-                ]),
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.transparent,
+                    accent.withOpacity(0.6),
+                    accent,
+                    accent.withOpacity(0.6),
+                    Colors.transparent,
+                  ],
+                ),
               ),
             ),
           ),
-          // Center icon
           Container(
             width: 64,
             height: 64,
@@ -425,7 +1057,7 @@ class _ProgressIllustration extends StatelessWidget {
               ],
             ),
             child: Icon(
-              isWorker ? Icons.check_rounded : Icons.done_all_rounded,
+              _iconForStatus(currentStatus),
               color: Colors.white,
               size: 32,
             ),
@@ -434,11 +1066,32 @@ class _ProgressIllustration extends StatelessWidget {
       ),
     );
   }
+
+  static IconData _iconForStatus(String? status) {
+    switch (status) {
+      case 'requested':
+        return Icons.assignment_outlined;
+      case 'assigned':
+        return Icons.person_pin_circle_outlined;
+      case 'on_the_way':
+        return Icons.directions_car_filled_outlined;
+      case 'in_progress':
+        return Icons.handyman_outlined;
+      case 'completed':
+        return Icons.check_rounded;
+      case 'cancelled':
+        return Icons.close_rounded;
+      case 'draft':
+        return Icons.edit_note_outlined;
+      default:
+        return Icons.track_changes_rounded;
+    }
+  }
 }
 
-/// Tarjeta de Puntos de Prestigio — vista Trabajador.
 class _PrestigeCard extends StatelessWidget {
   final String? userName;
+
   const _PrestigeCard({this.userName});
 
   @override
@@ -462,8 +1115,11 @@ class _PrestigeCard extends StatelessWidget {
                   color: const Color(0xFFF97316),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.emoji_events_outlined,
-                    color: Colors.white, size: 22),
+                child: const Icon(
+                  Icons.emoji_events_outlined,
+                  color: Colors.white,
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -504,12 +1160,11 @@ class _PrestigeCard extends StatelessWidget {
           const SizedBox(height: 8),
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
+            child: const LinearProgressIndicator(
               value: 0.65,
               minHeight: 10,
-              backgroundColor: const Color(0xFFFED7AA),
-              valueColor:
-                  const AlwaysStoppedAnimation<Color>(Color(0xFFF97316)),
+              backgroundColor: Color(0xFFFED7AA),
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFF97316)),
             ),
           ),
         ],
@@ -518,7 +1173,6 @@ class _PrestigeCard extends StatelessWidget {
   }
 }
 
-/// Tarjeta con info del Trabajador — vista Cliente.
 class _WorkerInfoCard extends StatelessWidget {
   final String name;
   final String? photoUrl;
@@ -539,12 +1193,10 @@ class _WorkerInfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ratingLabel = rating != null ? rating!.toStringAsFixed(1) : '—';
-    final reviewLabel =
-        reviewCount != null ? '($reviewCount reseñas)' : '';
-    final scheduleLabel = formatAvailabilityLabel(date: scheduledAt) ;
-    final costLabel = totalCost != null
-        ? formatCurrencyCop(totalCost!)
-        : '\$45.00';
+    final reviewLabel = reviewCount != null ? '($reviewCount reseñas)' : '';
+    final scheduleLabel = formatAvailabilityLabel(date: scheduledAt);
+    final costLabel =
+        totalCost != null ? formatCurrencyCop(totalCost!) : '\$45.00';
 
     return Container(
       width: double.infinity,
@@ -562,7 +1214,6 @@ class _WorkerInfoCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Worker identity
           Row(
             children: [
               CircleAvatar(
@@ -589,8 +1240,11 @@ class _WorkerInfoCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.star_rounded,
-                          color: Color(0xFFF59E0B), size: 16),
+                      const Icon(
+                        Icons.star_rounded,
+                        color: Color(0xFFF59E0B),
+                        size: 16,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         '$ratingLabel $reviewLabel',
@@ -609,14 +1263,12 @@ class _WorkerInfoCard extends StatelessWidget {
             padding: EdgeInsets.symmetric(vertical: 16),
             child: Divider(color: Color(0xFFF1F5F9)),
           ),
-          // Schedule row
           _InfoRow(
             icon: Icons.calendar_today_outlined,
             label: 'Fecha y Hora',
             value: scheduleLabel,
           ),
           const SizedBox(height: 14),
-          // Cost row
           _InfoRow(
             icon: Icons.payments_outlined,
             label: 'Costo Total',
@@ -632,7 +1284,12 @@ class _InfoRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
-  const _InfoRow({required this.icon, required this.label, required this.value});
+
+  const _InfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -675,9 +1332,9 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-/// Banner azul con mensaje de escrow dinámico.
 class _EscrowBanner extends StatelessWidget {
   final String message;
+
   const _EscrowBanner({required this.message});
 
   @override
@@ -692,8 +1349,11 @@ class _EscrowBanner extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.info_outline_rounded,
-              color: Color(0xFF2563EB), size: 20),
+          const Icon(
+            Icons.info_outline_rounded,
+            color: Color(0xFF2563EB),
+            size: 20,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(

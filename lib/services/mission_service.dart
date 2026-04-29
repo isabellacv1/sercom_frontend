@@ -1,4 +1,5 @@
 import '../core/api_client.dart';
+import '../models/mission_status.dart';
 import '../models/mission_model.dart';
 
 class MissionService {
@@ -32,25 +33,109 @@ class MissionService {
 
     final data = response.data;
 
-    return MissionModel.fromJson(data['service']);
+    if (data is Map<String, dynamic>) {
+      if (data['service'] is Map<String, dynamic>) {
+        return MissionModel.fromJson(data['service']);
+      }
+
+      return MissionModel.fromJson(data);
+    }
+
+    throw Exception('Respuesta inválida al crear la misión');
   }
 
   Future<List<MissionModel>> getMyMissions() async {
     final response = await api.get('/services/me');
 
-    final data = response.data as List;
-    return data.map((e) => MissionModel.fromJson(e)).toList();
+    final data = response.data;
+
+    if (data is List) {
+      return data
+          .map((e) => MissionModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+
+    if (data is Map<String, dynamic> && data['services'] is List) {
+      return (data['services'] as List)
+          .map((e) => MissionModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+
+    throw Exception('Respuesta inválida al consultar misiones');
   }
 
   Future<List<MissionModel>> getMissionsByStatus(String status) async {
-    final response = await api.get('/missions', queryParameters: {'status': status});
-    final data = response.data as List;
-    return data.map((e) => MissionModel.fromJson(e)).toList();
+    final normalizedStatus = MissionStatus.normalize(status);
+
+    final response = await api.get(
+      '/missions',
+      queryParameters: {
+        'status': normalizedStatus,
+      },
+    );
+
+    final data = response.data;
+
+    if (data is List) {
+      return data
+          .map((e) => MissionModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+
+    if (data is Map<String, dynamic> && data['missions'] is List) {
+      return (data['missions'] as List)
+          .map((e) => MissionModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+
+    if (data is Map<String, dynamic> && data['services'] is List) {
+      return (data['services'] as List)
+          .map((e) => MissionModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+
+    throw Exception('Respuesta inválida al consultar misiones por estado');
   }
 
   Future<MissionModel> getMissionById(String missionId) async {
     final response = await api.get('/services/me/$missionId');
 
-    return MissionModel.fromJson(response.data);
+    final data = response.data;
+
+    if (data is Map<String, dynamic>) {
+      if (data['service'] is Map<String, dynamic>) {
+        return MissionModel.fromJson(data['service']);
+      }
+
+      return MissionModel.fromJson(data);
+    }
+
+    throw Exception('Respuesta inválida al consultar la misión');
   }
+
+ Future<MissionModel> updateMissionStatus({
+  required String missionId,
+  required String status,
+}) async {
+  final normalizedStatus = MissionStatus.normalize(status);
+
+  final response = await api.patch(
+    '/services/$missionId/status',
+    data: {
+      'status': normalizedStatus,
+    },
+  );
+
+  final data = response.data;
+
+  if (data is Map<String, dynamic>) {
+    if (data['service'] is Map<String, dynamic>) {
+      return MissionModel.fromJson(data['service']);
+    }
+
+    return MissionModel.fromJson(data);
+  }
+
+  throw Exception('Respuesta inválida al actualizar el estado');
+}
 }

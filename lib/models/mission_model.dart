@@ -1,4 +1,4 @@
-import '../core/display_formatters.dart';
+import '../models/mission_status.dart';
 
 class MissionModel {
   final String id;
@@ -37,73 +37,104 @@ class MissionModel {
     this.createdAtRelative,
     this.priceMin,
     this.priceMax,
+    this.latitude,
+    this.longitude,
     this.scheduledDate,
     this.scheduledFrom,
     this.scheduledTo,
     this.scheduledAt,
-    this.latitude,
-    this.longitude,
   });
 
   factory MissionModel.fromJson(Map<String, dynamic> json) {
-    final scheduledAtValue =
-        json['scheduled_at']?.toString() ?? json['scheduledAt']?.toString();
+    final normalizedStatus = MissionStatus.normalize(json['status']?.toString());
 
     return MissionModel(
-      id: readStringValue(json, ['id']) ?? '',
-      description: readStringValue(json, ['description']) ?? '',
-      address: readStringValue(json, ['address']) ?? '',
-      status: readStringValue(json, ['status']) ?? 'pending',
-      minBudget: readIntValue(json, ['min_budget', 'budget_min', 'minBudget']),
-      maxBudget: readIntValue(json, ['max_budget', 'budget_max', 'maxBudget']),
-      serviceTitle: readStringValue(json, ['service_title', 'serviceTitle', 'title']),
-      categoryName: readStringValue(json, ['category_name', 'categoryName']),
-      nearbyTechnicians: readIntValue(
-            json,
-            ['nearby_technicians', 'nearbyTechnicians'],
-          ) ??
-          0,
-      offerCount: readIntValue(json, [
-        'offer_count',
-        'offerCount',
-        'offers_count',
-        'offersCount',
-        'proposal_count',
-        'proposalCount',
-        'proposals_count',
-        'proposalsCount',
-      ]),
-      statusLabel: readStringValue(json, ['status_label', 'statusLabel']),
-      createdAtRelative: readStringValue(
-        json,
-        ['created_at_relative', 'createdAtRelative'],
-      ),
-      priceMin: readIntValue(json, ['price_min', 'priceMin', 'min_budget', 'budget_min']),
-      priceMax: readIntValue(json, ['price_max', 'priceMax', 'max_budget', 'budget_max']),
-      scheduledAt: scheduledAtValue,
-      scheduledDate: readStringValue(
-            json,
-            [
-              'scheduled_date',
-              'scheduledDate',
-              'service_date',
-              'serviceDate',
-              'requested_date',
-              'requestedDate',
-              'date',
-            ],
-          ) ??
-          scheduledAtValue,
-      scheduledFrom: readStringValue(
-        json,
-        ['scheduled_from', 'scheduledFrom', 'available_from', 'availableFrom'],
-      ),
-      scheduledTo: readStringValue(
-        json,
-        ['scheduled_to', 'scheduledTo', 'available_to', 'availableTo'],
-      ),
-      latitude: double.tryParse(json['latitude']?.toString() ?? ''),
-      longitude: double.tryParse(json['longitude']?.toString() ?? ''),
+      id: json['id']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
+      address: json['address']?.toString() ?? '',
+      status: normalizedStatus,
+
+      minBudget: json['min_budget'] ?? json['budget_min'],
+      maxBudget: json['max_budget'] ?? json['budget_max'],
+
+      serviceTitle: json['service_title']?.toString() ??
+          json['title']?.toString() ??
+          json['serviceOption']?['title']?.toString(),
+
+      categoryName: json['category_name']?.toString() ??
+          json['category']?['name']?.toString(),
+
+      nearbyTechnicians: json['nearby_technicians'] ?? 0,
+      offerCount: json['offer_count'],
+
+      // Importante: el label sale del status real
+      statusLabel: MissionStatus.label(normalizedStatus),
+
+      createdAtRelative: json['created_at_relative']?.toString(),
+
+      priceMin: json['price_min'] ?? json['budget_min'],
+      priceMax: json['price_max'] ?? json['budget_max'],
+
+      latitude: json['latitude'] == null
+          ? null
+          : double.tryParse(json['latitude'].toString()),
+
+      longitude: json['longitude'] == null
+          ? null
+          : double.tryParse(json['longitude'].toString()),
+
+      scheduledDate: json['scheduled_date']?.toString(),
+      scheduledFrom: json['scheduled_from']?.toString(),
+      scheduledTo: json['scheduled_to']?.toString(),
+      scheduledAt: json['scheduled_at']?.toString(),
+    );
+  }
+
+  MissionModel copyWith({
+    String? id,
+    String? description,
+    String? address,
+    String? status,
+    int? minBudget,
+    int? maxBudget,
+    String? serviceTitle,
+    String? categoryName,
+    int? nearbyTechnicians,
+    int? offerCount,
+    String? statusLabel,
+    String? createdAtRelative,
+    int? priceMin,
+    int? priceMax,
+    double? latitude,
+    double? longitude,
+    String? scheduledDate,
+    String? scheduledFrom,
+    String? scheduledTo,
+    String? scheduledAt,
+  }) {
+    final normalizedStatus = MissionStatus.normalize(status ?? this.status);
+
+    return MissionModel(
+      id: id ?? this.id,
+      description: description ?? this.description,
+      address: address ?? this.address,
+      status: normalizedStatus,
+      minBudget: minBudget ?? this.minBudget,
+      maxBudget: maxBudget ?? this.maxBudget,
+      serviceTitle: serviceTitle ?? this.serviceTitle,
+      categoryName: categoryName ?? this.categoryName,
+      nearbyTechnicians: nearbyTechnicians ?? this.nearbyTechnicians,
+      offerCount: offerCount ?? this.offerCount,
+      statusLabel: statusLabel ?? MissionStatus.label(normalizedStatus),
+      createdAtRelative: createdAtRelative ?? this.createdAtRelative,
+      priceMin: priceMin ?? this.priceMin,
+      priceMax: priceMax ?? this.priceMax,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      scheduledDate: scheduledDate ?? this.scheduledDate,
+      scheduledFrom: scheduledFrom ?? this.scheduledFrom,
+      scheduledTo: scheduledTo ?? this.scheduledTo,
+      scheduledAt: scheduledAt ?? this.scheduledAt,
     );
   }
 }

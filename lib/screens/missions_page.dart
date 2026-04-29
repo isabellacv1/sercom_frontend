@@ -49,18 +49,57 @@ class _MissionsPageState extends State<MissionsPage> {
     }
   }
 
+  String normalizeStatus(String status) {
+    return status.trim().toLowerCase();
+  }
+
+  bool isProposalStatus(MissionModel mission) {
+    final status = normalizeStatus(mission.status);
+
+    return status == 'requested' ||
+        status == 'pending' ||
+        status == 'receiving_offers';
+  }
+
+  bool isInCourseStatus(MissionModel mission) {
+    final status = normalizeStatus(mission.status);
+
+    return status == 'assigned' ||
+        status == 'confirmed' ||
+        status == 'on_the_way' ||
+        status == 'in_progress';
+  }
+
+  bool isFinishedStatus(MissionModel mission) {
+    final status = normalizeStatus(mission.status);
+
+    return status == 'finished' ||
+        status == 'completed' ||
+        status == 'cancelled';
+  }
+
+  bool shouldShowDetailsButton(MissionModel mission) {
+    return isInCourseStatus(mission) || isFinishedStatus(mission);
+  }
+
   String getStatusLabel(String status) {
-    switch (status) {
+    final normalizedStatus = normalizeStatus(status);
+
+    switch (normalizedStatus) {
+      case 'requested':
+        return 'Solicitado';
       case 'pending':
         return 'Buscando trabajadores';
       case 'receiving_offers':
         return 'Recibiendo postulaciones';
       case 'assigned':
-        return 'En curso';
+        return 'Asignado';
       case 'confirmed':
         return 'Confirmada';
+      case 'on_the_way':
+        return 'En camino';
       case 'in_progress':
-        return 'En curso';
+        return 'En ejecución';
       case 'finished':
         return 'Finalizada';
       case 'completed':
@@ -73,16 +112,20 @@ class _MissionsPageState extends State<MissionsPage> {
   }
 
   Color getStatusColor(String status) {
-    switch (status) {
+    final normalizedStatus = normalizeStatus(status);
+
+    switch (normalizedStatus) {
+      case 'requested':
       case 'pending':
         return const Color(0xFFEAB308);
       case 'receiving_offers':
         return const Color(0xFF2563EB);
       case 'assigned':
-      case 'in_progress':
-        return const Color(0xFF6366F1);
       case 'confirmed':
         return const Color(0xFF22C55E);
+      case 'on_the_way':
+      case 'in_progress':
+        return const Color(0xFF6366F1);
       case 'finished':
       case 'completed':
         return const Color(0xFF64748B);
@@ -97,24 +140,16 @@ class _MissionsPageState extends State<MissionsPage> {
     if (selectedTab == 0) {
       return missions
           .where(
-            (m) =>
-                m.status != 'finished' &&
-                m.status != 'completed' &&
-                m.status != 'in_progress' &&
-                m.status != 'assigned',
+            (m) => !isInCourseStatus(m) && !isFinishedStatus(m),
           )
           .toList();
     }
 
     if (selectedTab == 1) {
-      return missions
-          .where((m) => m.status == 'in_progress' || m.status == 'assigned')
-          .toList();
+      return missions.where((m) => isInCourseStatus(m)).toList();
     }
 
-    return missions
-        .where((m) => m.status == 'finished' || m.status == 'completed')
-        .toList();
+    return missions.where((m) => isFinishedStatus(m)).toList();
   }
 
   String getBudgetText(MissionModel mission) {
@@ -142,8 +177,8 @@ class _MissionsPageState extends State<MissionsPage> {
   }
 
   String getProposalButtonText(MissionModel mission) {
-    if (mission.status == 'assigned' || mission.status == 'in_progress') {
-      return 'Ver detalle';
+    if (shouldShowDetailsButton(mission)) {
+      return 'Ver detalles';
     }
 
     final count = mission.offerCount;
@@ -155,6 +190,41 @@ class _MissionsPageState extends State<MissionsPage> {
     if (selectedTab == 0) return 'No tienes misiones activas';
     if (selectedTab == 1) return 'No tienes misiones en curso';
     return 'No tienes misiones finalizadas';
+  }
+
+  Future<void> goToMissionDetails(MissionModel mission) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ServiceConfirmationPage(
+          serviceId: mission.id,
+          isWorker: false,
+          serviceTitle: mission.serviceTitle,
+          scheduledAt: mission.scheduledAt ?? mission.scheduledDate,
+          totalCost: (mission.priceMin ?? 0) > 0
+              ? mission.priceMin
+              : mission.priceMax,
+        ),
+      ),
+    );
+
+    if (!mounted) return;
+    loadMissions();
+  }
+
+  Future<void> goToProposals(MissionModel mission) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CandidateListScreen(
+          serviceId: mission.id,
+          mission: mission,
+        ),
+      ),
+    );
+
+    if (!mounted) return;
+    loadMissions();
   }
 
   @override
@@ -254,7 +324,11 @@ class _MissionsPageState extends State<MissionsPage> {
                                   children: [
                                     Row(
                                       children: [
-                                        Icon(Icons.circle, size: 12, color: color),
+                                        Icon(
+                                          Icons.circle,
+                                          size: 12,
+                                          color: color,
+                                        ),
                                         const SizedBox(width: 8),
                                         Expanded(
                                           child: Text(
@@ -267,7 +341,8 @@ class _MissionsPageState extends State<MissionsPage> {
                                           ),
                                         ),
                                         if (mission.createdAtRelative != null &&
-                                            mission.createdAtRelative!.isNotEmpty)
+                                            mission
+                                                .createdAtRelative!.isNotEmpty)
                                           Text(
                                             mission.createdAtRelative!,
                                             style: const TextStyle(
@@ -321,13 +396,16 @@ class _MissionsPageState extends State<MissionsPage> {
                                     const SizedBox(height: 8),
                                     Row(
                                       children: [
-                                        const Icon(Icons.calendar_today_outlined,
-                                            size: 18, color: Color(0xFF2563EB)),
+                                        const Icon(
+                                          Icons.calendar_today_outlined,
+                                          size: 18,
+                                          color: Color(0xFF2563EB),
+                                        ),
                                         const SizedBox(width: 8),
-                                        const Expanded(
+                                        Expanded(
                                           child: Text(
-                                            'Para hoy',
-                                            style: TextStyle(
+                                            getScheduleText(mission),
+                                            style: const TextStyle(
                                               color: Color(0xFF475569),
                                               fontSize: 15,
                                             ),
@@ -355,48 +433,19 @@ class _MissionsPageState extends State<MissionsPage> {
                                       height: 52,
                                       child: ElevatedButton(
                                         style: ElevatedButton.styleFrom(
-                                          backgroundColor: const Color(0xFF2563EB),
+                                          backgroundColor:
+                                              const Color(0xFF2563EB),
                                           foregroundColor: Colors.white,
                                           shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(18),
+                                            borderRadius:
+                                                BorderRadius.circular(18),
                                           ),
                                         ),
                                         onPressed: () async {
-                                          final isInProgress =
-                                              mission.status == 'in_progress' ||
-                                              mission.status == 'assigned';
-
-                                          if (isInProgress) {
-                                            // HU-10: Ir a pantalla de Confirmación de Servicio
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (_) => ServiceConfirmationPage(
-                                                  serviceId: mission.id,
-                                                  isWorker: false,
-                                                  serviceTitle: mission.serviceTitle,
-                                                  scheduledAt: mission.scheduledAt ??
-                                                      mission.scheduledDate,
-                                                  totalCost: (mission.priceMin ?? 0) > 0
-                                                      ? mission.priceMin
-                                                      : mission.priceMax,
-                                                ),
-                                              ),
-                                            );
+                                          if (shouldShowDetailsButton(mission)) {
+                                            await goToMissionDetails(mission);
                                           } else {
-                                            // Ver candidatos / propuestas recibidas
-                                            await Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (context) =>
-                                                    CandidateListScreen(
-                                                  serviceId: mission.id,
-                                                  mission: mission,
-                                                ),
-                                              ),
-                                            );
-                                            if (!mounted) return;
-                                            loadMissions();
+                                            await goToProposals(mission);
                                           }
                                         },
                                         child: Text(
@@ -443,8 +492,9 @@ class _MissionsPageState extends State<MissionsPage> {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-              color:
-                  selected ? const Color(0xFF0F172A) : const Color(0xFF64748B),
+              color: selected
+                  ? const Color(0xFF0F172A)
+                  : const Color(0xFF64748B),
             ),
           ),
         ),
