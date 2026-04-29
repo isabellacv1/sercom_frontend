@@ -470,9 +470,35 @@ class _PostulationsScreenState extends State<PostulationsScreen>
                 child: SizedBox(
                   height: 48,
                   child: ElevatedButton(
-                    onPressed: () {},
+                    // Solo navega a Confirmación si la propuesta fue aceptada;
+                    // para las pendientes el botón queda sin acción (UX informativa).
+                    onPressed: isAccepted
+                        ? () {
+                            final serviceId = readStringValue(
+                              p,
+                              ['service_id', 'serviceId'],
+                            );
+                            if (serviceId == null) return;
+                            Navigator.pushNamed(
+                              context,
+                              '/service-confirmation',
+                              arguments: {
+                                'serviceId': serviceId,
+                                'isWorker': true,
+                                'serviceTitle': serviceTitle,
+                                'scheduledAt': readStringValue(
+                                  p,
+                                  ['scheduled_at', 'scheduledAt', 'scheduled_date'],
+                                ),
+                              },
+                            );
+                          }
+                        : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFF7A20),
+                      backgroundColor: isAccepted
+                          ? const Color(0xFFFF7A20)
+                          : const Color(0xFFCBD5E1),
+                      disabledBackgroundColor: const Color(0xFFCBD5E1),
                       elevation: 0,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     ),
@@ -480,7 +506,7 @@ class _PostulationsScreenState extends State<PostulationsScreen>
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          'Detalles de la Misión',
+                          isAccepted ? 'Ir a Confirmación' : 'En espera de respuesta',
                           style: GoogleFonts.montserrat(
                             color: Colors.white,
                             fontWeight: FontWeight.w700,
@@ -488,7 +514,11 @@ class _PostulationsScreenState extends State<PostulationsScreen>
                           ),
                         ),
                         const SizedBox(width: 6),
-                        const Icon(Icons.arrow_forward, color: Colors.white, size: 15),
+                        Icon(
+                          isAccepted ? Icons.verified_outlined : Icons.hourglass_empty,
+                          color: Colors.white,
+                          size: 15,
+                        ),
                       ],
                     ),
                   ),

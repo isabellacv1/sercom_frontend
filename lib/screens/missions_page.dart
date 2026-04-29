@@ -3,6 +3,7 @@ import '../core/display_formatters.dart';
 import '../models/mission_model.dart';
 import '../services/mission_service.dart';
 import 'candidate_list_screen.dart';
+import 'service_confirmation_page.dart';
 
 class MissionsPage extends StatefulWidget {
   const MissionsPage({super.key});
@@ -361,19 +362,42 @@ class _MissionsPageState extends State<MissionsPage> {
                                           ),
                                         ),
                                         onPressed: () async {
-                                          await Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) =>
-                                                  CandidateListScreen(
-                                                serviceId: mission.id,
-                                                mission: mission,
-                                              ),
-                                            ),
-                                          );
+                                          final isInProgress =
+                                              mission.status == 'in_progress' ||
+                                              mission.status == 'assigned';
 
-                                          if (!mounted) return;
-                                          loadMissions();
+                                          if (isInProgress) {
+                                            // HU-10: Ir a pantalla de Confirmación de Servicio
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) => ServiceConfirmationPage(
+                                                  serviceId: mission.id,
+                                                  isWorker: false,
+                                                  serviceTitle: mission.serviceTitle,
+                                                  scheduledAt: mission.scheduledAt ??
+                                                      mission.scheduledDate,
+                                                  totalCost: (mission.priceMin ?? 0) > 0
+                                                      ? mission.priceMin
+                                                      : mission.priceMax,
+                                                ),
+                                              ),
+                                            );
+                                          } else {
+                                            // Ver candidatos / propuestas recibidas
+                                            await Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    CandidateListScreen(
+                                                  serviceId: mission.id,
+                                                  mission: mission,
+                                                ),
+                                              ),
+                                            );
+                                            if (!mounted) return;
+                                            loadMissions();
+                                          }
                                         },
                                         child: Text(
                                           getProposalButtonText(mission),

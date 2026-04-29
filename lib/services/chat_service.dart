@@ -27,9 +27,16 @@ class ChatService {
     return ChatRoom.fromJson(room, currentUserId: currentUserId);
   }
 
-  Future<List<ChatRoom>> getMyRooms() async {
+    Future<List<ChatRoom>> getMyRooms({String role = 'all'}) async {
     final currentUserId = await requireCurrentUserId();
-    final response = await api.get('/chat/users/$currentUserId/rooms');
+
+    final response = await api.get(
+      '/chat/users/$currentUserId/rooms',
+      queryParameters: {
+        'role': role,
+      },
+    );
+
     final data = _extractList(response.data, fallbackKey: 'rooms');
 
     final rooms = data
