@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/auth_service.dart';
 import 'worker_home_screen.dart';
+import 'worker_main_layout.dart';
 
 class WorkerOnboardingPage extends StatefulWidget {
   const WorkerOnboardingPage({Key? key}) : super(key: key);
@@ -21,7 +22,7 @@ class _WorkerOnboardingPageState extends State<WorkerOnboardingPage> {
       if (!mounted) return;
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const WorkerHomeScreen()),
+        MaterialPageRoute(builder: (_) => const WorkerMainLayout()),
         (route) => false,
       );
     } catch (e) {
