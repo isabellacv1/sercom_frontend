@@ -6,7 +6,12 @@
         import '../services/chat_socket_service.dart';
 
         class ChatRoomsPage extends StatefulWidget {
-          const ChatRoomsPage({super.key});
+          final String role;
+
+          const ChatRoomsPage({
+            super.key,
+            this.role = 'all',
+          });
 
           @override
           State<ChatRoomsPage> createState() => _ChatRoomsPageState();
@@ -48,8 +53,7 @@
       }
 
       try {
-        final rooms = await _chatService.getMyRooms();
-
+        final rooms = await _chatService.getMyRooms(role: widget.role);
         await _joinRooms(rooms);
 
         if (!mounted) return;
@@ -98,14 +102,15 @@
             });
           }
 
-          Future<void> _openRoom(ChatRoom room) async {
+         Future<void> _openRoom(ChatRoom room) async {
             await Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => ChatPage(room: room)),
             );
 
             if (mounted) {
-              _loadRooms(showLoading: false);
+              await _loadRooms(showLoading: false);
+              await _initSocket();
             }
           }
 
