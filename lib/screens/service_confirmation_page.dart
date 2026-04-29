@@ -381,60 +381,71 @@ String _resolveLiveStatus(Map<String, dynamic>? row) {
     await _updateServiceStatus(nextStatus);
   }
 
-  Future<void> _onConfirm() async {
-    if (_isLoading || _hasConfirmed) return;
+Future<void> _onConfirm() async {
+  if (_isLoading || _hasConfirmed) return;
 
-    setState(() => _isLoading = true);
+  setState(() => _isLoading = true);
 
-    try {
-      final result =
-          await _confirmationService.confirmCompletion(widget.serviceId);
+  try {
+    final result =
+        await _confirmationService.confirmCompletion(widget.serviceId);
 
-      if (!mounted) return;
+    if (!mounted) return;
 
-      setState(() {
-        _isLoading = false;
-        _hasConfirmed = true;
-      });
+    final rawService = result['service'];
+    final updatedService = rawService is Map
+        ? Map<String, dynamic>.from(rawService)
+        : <String, dynamic>{};
 
-      final updatedService = result['service'] as Map<String, dynamic>?;
-      final newStatus = _normalizeStatus(updatedService?['status']?.toString());
+    final clientConfirmed = updatedService['client_confirmation'] == true;
+    final workerConfirmed = updatedService['worker_confirmation'] == true;
 
-      if (newStatus == 'completed') {
-        _navigateToReview();
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white),
-                const SizedBox(width: 8),
-                Text(
-                  widget.isWorker
-                      ? '¡Tu confirmación fue registrada!'
-                      : '¡Confirmaste el servicio!',
-                ),
-              ],
-            ),
-            backgroundColor: const Color(0xFF10B981),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
+    final currentUserConfirmed =
+        widget.isWorker ? workerConfirmed : clientConfirmed;
 
-      setState(() => _isLoading = false);
+    setState(() {
+      _isLoading = false;
+      _hasConfirmed = currentUserConfirmed;
+    });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al confirmar: $e'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+    if (clientConfirmed && workerConfirmed) {
+      _navigateToReview();
+      return;
     }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                widget.isWorker
+                    ? 'Tu confirmación fue registrada. Falta la confirmación del cliente.'
+                    : 'Tu confirmación fue registrada. Falta la confirmación del trabajador.',
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: const Color(0xFF10B981),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  } catch (e) {
+    if (!mounted) return;
+
+    setState(() => _isLoading = false);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Error al confirmar: $e'),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
+}
 
   void _navigateToReview() {
     Navigator.of(context).pushReplacement(
