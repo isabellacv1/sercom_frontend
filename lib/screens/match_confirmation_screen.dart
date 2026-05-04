@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import '../core/display_formatters.dart';
 import '../models/chat_room.dart';
 import '../models/technician.dart';
 import '../services/chat_service.dart';
+import '../services/payment_service.dart';
 import 'chat_page.dart';
 
-class MatchConfirmationScreen extends StatelessWidget {
+class MatchConfirmationScreen extends StatefulWidget {
   final Technician technician;
   final String? serviceId;
   final String? serviceTitle;
@@ -17,8 +20,63 @@ class MatchConfirmationScreen extends StatelessWidget {
     this.serviceTitle,
   });
 
+  @override
+  State<MatchConfirmationScreen> createState() =>
+      _MatchConfirmationScreenState();
+}
+
+class _MatchConfirmationScreenState extends State<MatchConfirmationScreen> {
+  bool _isPaying = false;
+
+  Future<void> _continueToPayment() async {
+    final id = widget.serviceId?.trim();
+
+    if (id == null || id.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se encontró el servicio para iniciar el pago'),
+          backgroundColor: Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isPaying = true);
+
+    try {
+      final paymentLink = await PaymentService().createMercadoPagoLink(id);
+      final uri = Uri.parse(paymentLink.checkoutUrl);
+
+      final opened = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+
+      if (!opened) {
+        throw Exception('No se pudo abrir Mercado Pago');
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      final message = e.toString().replaceAll('Exception: ', '');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('No se pudo iniciar el pago: $message'),
+          backgroundColor: const Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isPaying = false);
+      }
+    }
+  }
+
   Future<void> _openChat(BuildContext context) async {
-    final id = serviceId?.trim();
+    final id = widget.serviceId?.trim();
+
     if (id == null || id.isEmpty) {
       Navigator.pushNamed(context, '/chat-rooms');
       return;
@@ -26,15 +84,16 @@ class MatchConfirmationScreen extends StatelessWidget {
 
     try {
       final room = await ChatService().getRoomByService(id);
+
       if (!context.mounted) return;
 
       final chatRoom = ChatRoom(
         id: room.id,
         serviceId: room.serviceId.isNotEmpty ? room.serviceId : id,
-        title: serviceTitle ?? room.title,
-        participantName: technician.name,
-        participantSubtitle: technician.title,
-        participantAvatarUrl: technician.profileImageUrl,
+        title: widget.serviceTitle ?? room.title,
+        participantName: widget.technician.name,
+        participantSubtitle: widget.technician.title,
+        participantAvatarUrl: widget.technician.profileImageUrl,
         lastMessagePreview: room.lastMessagePreview,
         updatedAt: room.updatedAt,
         unreadCount: room.unreadCount,
@@ -42,12 +101,15 @@ class MatchConfirmationScreen extends StatelessWidget {
 
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => ChatPage(room: chatRoom)),
+        MaterialPageRoute(
+          builder: (_) => ChatPage(room: chatRoom),
+        ),
       );
     } catch (e) {
       if (!context.mounted) return;
 
       final message = e.toString().replaceAll('Exception: ', '');
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('No se pudo abrir el chat: $message'),
@@ -66,9 +128,12 @@ class MatchConfirmationScreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Color(0xFF0F172A), size: 28),
+          icon: const Icon(
+            Icons.close,
+            color: Color(0xFF0F172A),
+            size: 28,
+          ),
           onPressed: () {
-            // Regresar al home o misiones
             Navigator.of(context).popUntil((route) => route.isFirst);
           },
         ),
@@ -81,7 +146,6 @@ class MatchConfirmationScreen extends StatelessWidget {
             children: [
               const Spacer(flex: 1),
 
-              // Animated checkmark illustration (Badge included)
               Stack(
                 clipBehavior: Clip.none,
                 alignment: Alignment.center,
@@ -142,7 +206,6 @@ class MatchConfirmationScreen extends StatelessWidget {
 
               const Spacer(flex: 1),
 
-              // Match details card
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
@@ -163,36 +226,43 @@ class MatchConfirmationScreen extends StatelessWidget {
                         CircleAvatar(
                           radius: 24,
                           backgroundImage: NetworkImage(
-                            technician.profileImageUrl,
+                            widget.technician.profileImageUrl,
                           ),
                         ),
                         const SizedBox(width: 16),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              technician.name,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w800,
-                                color: Color(0xFF0F172A),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.technician.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF0F172A),
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '⭐ ${technician.rating} (${technician.reviewsCount} reseñas)',
-                              style: const TextStyle(
-                                color: Color(0xFF64748B),
-                                fontSize: 13,
+                              const SizedBox(height: 4),
+                              Text(
+                                '⭐ ${widget.technician.rating} (${widget.technician.reviewsCount} reseñas)',
+                                style: const TextStyle(
+                                  color: Color(0xFF64748B),
+                                  fontSize: 13,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ],
                     ),
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 24),
-                      child: Divider(color: Color(0xFFE5E7EB), thickness: 1),
+                      child: Divider(
+                        color: Color(0xFFE5E7EB),
+                        thickness: 1,
+                      ),
                     ),
                     Row(
                       children: [
@@ -209,30 +279,32 @@ class MatchConfirmationScreen extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 16),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Fecha y Hora',
-                              style: TextStyle(
-                                color: Color(0xFF64748B),
-                                fontSize: 13,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Fecha y Hora',
+                                style: TextStyle(
+                                  color: Color(0xFF64748B),
+                                  fontSize: 13,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              formatAvailabilityLabel(
-                                date: technician.availableDate,
-                                from: technician.availableFrom,
-                                to: technician.availableTo,
+                              const SizedBox(height: 2),
+                              Text(
+                                formatAvailabilityLabel(
+                                  date: widget.technician.availableDate,
+                                  from: widget.technician.availableFrom,
+                                  to: widget.technician.availableTo,
+                                ),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF0F172A),
+                                ),
                               ),
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF0F172A),
-                              ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -252,37 +324,42 @@ class MatchConfirmationScreen extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 16),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Costo Total',
-                              style: TextStyle(
-                                color: Color(0xFF64748B),
-                                fontSize: 13,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Costo Total',
+                                style: TextStyle(
+                                  color: Color(0xFF64748B),
+                                  fontSize: 13,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 2),
-                            Row(
-                              children: [
-                                Text(
-                                  formatCurrencyCop(technician.proposedPrice),
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w800,
-                                    color: Color(0xFF0F172A),
+                              const SizedBox(height: 2),
+                              Wrap(
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  Text(
+                                    formatCurrencyCop(
+                                      widget.technician.proposedPrice,
+                                    ),
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800,
+                                      color: Color(0xFF0F172A),
+                                    ),
                                   ),
-                                ),
-                                const Text(
-                                  ' (Incluye comisión)',
-                                  style: TextStyle(
-                                    color: Color(0xFF94A3B8),
-                                    fontSize: 12,
+                                  const Text(
+                                    ' (Incluye comisión)',
+                                    style: TextStyle(
+                                      color: Color(0xFF94A3B8),
+                                      fontSize: 12,
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ],
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -292,18 +369,23 @@ class MatchConfirmationScreen extends StatelessWidget {
 
               const SizedBox(height: 24),
 
-              // Info note
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: const Color(0xFFEFF6FF),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFBFDBFE)),
+                  border: Border.all(
+                    color: const Color(0xFFBFDBFE),
+                  ),
                 ),
-                child: Row(
+                child: const Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Icon(Icons.info, color: Color(0xFF2563EB), size: 20),
+                  children: [
+                    Icon(
+                      Icons.info,
+                      color: Color(0xFF2563EB),
+                      size: 20,
+                    ),
                     SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -321,13 +403,13 @@ class MatchConfirmationScreen extends StatelessWidget {
 
               const Spacer(flex: 2),
 
-              // Bottom Buttons
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {},
+                  onPressed: _isPaying ? null : _continueToPayment,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF2563EB),
+                    disabledBackgroundColor: const Color(0xFF93C5FD),
                     padding: const EdgeInsets.symmetric(vertical: 18),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -335,27 +417,40 @@ class MatchConfirmationScreen extends StatelessWidget {
                     elevation: 10,
                     shadowColor: const Color(0x332563EB),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Text(
-                        'Continuar al Pago ',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
+                  child: _isPaying
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Continuar al Pago ',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            Icon(
+                              Icons.credit_card,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ],
                         ),
-                      ),
-                      Icon(Icons.credit_card, color: Colors.white, size: 20),
-                    ],
-                  ),
                 ),
               ),
               const SizedBox(height: 16),
               TextButton(
-                onPressed: () => _openChat(context),
+                onPressed: _isPaying ? null : () => _openChat(context),
                 child: Text(
-                  'Contactar a ${technician.name}',
+                  'Contactar a ${widget.technician.name}',
                   style: const TextStyle(
                     color: Color(0xFF64748B),
                     fontWeight: FontWeight.w600,
