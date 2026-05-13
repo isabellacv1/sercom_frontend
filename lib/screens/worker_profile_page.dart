@@ -18,7 +18,6 @@ class _WorkerProfilePageState extends State<WorkerProfilePage> {
   final CategoryService _categoryService = CategoryService();
   final TextEditingController _bioController = TextEditingController();
   final TextEditingController _yearsController = TextEditingController();
-  final TextEditingController _basePriceController = TextEditingController();
   final TextEditingController _portfolioTitleController = TextEditingController();
 
   final List<Map<String, String>> _zones = const [
@@ -58,7 +57,6 @@ class _WorkerProfilePageState extends State<WorkerProfilePage> {
   void dispose() {
     _bioController.dispose();
     _yearsController.dispose();
-    _basePriceController.dispose();
     _portfolioTitleController.dispose();
     super.dispose();
   }
@@ -94,15 +92,11 @@ class _WorkerProfilePageState extends State<WorkerProfilePage> {
       if (skills.isNotEmpty) {
         final firstSkill = skills.first;
         final years = firstSkill['years_experience'];
-        final basePrice = firstSkill['base_price'];
 
         if (years != null) {
           _yearsController.text = years.toString();
         }
 
-        if (basePrice != null) {
-          _basePriceController.text = basePrice.toString();
-        }
       }
 
       _bioController.text = profile['bio']?.toString() ?? '';
@@ -136,7 +130,6 @@ class _WorkerProfilePageState extends State<WorkerProfilePage> {
   Future<bool> _saveProfile({bool showMessage = true}) async {
     final bio = _bioController.text.trim();
     final yearsText = _yearsController.text.trim();
-    final basePriceText = _basePriceController.text.trim();
 
     if (bio.length > 1000) {
       _showMessage('La biografía no puede superar los 1000 caracteres', isError: true);
@@ -154,15 +147,9 @@ class _WorkerProfilePageState extends State<WorkerProfilePage> {
     }
 
     final years = yearsText.isEmpty ? null : int.tryParse(yearsText);
-    final basePrice = basePriceText.isEmpty ? null : num.tryParse(basePriceText);
 
     if (yearsText.isNotEmpty && (years == null || years < 0)) {
       _showMessage('Los años de experiencia deben ser un número válido', isError: true);
-      return false;
-    }
-
-    if (basePriceText.isNotEmpty && (basePrice == null || basePrice < 0)) {
-      _showMessage('La tarifa base debe ser un número válido', isError: true);
       return false;
     }
 
@@ -175,7 +162,6 @@ class _WorkerProfilePageState extends State<WorkerProfilePage> {
         return {
           'category_id': categoryId,
           if (years != null) 'years_experience': years,
-          if (basePrice != null) 'base_price': basePrice,
         };
       }).toList();
 
@@ -586,15 +572,7 @@ class _WorkerProfilePageState extends State<WorkerProfilePage> {
               icon: Icons.timeline_rounded,
             ),
           ),
-          const SizedBox(height: 14),
-          TextField(
-            controller: _basePriceController,
-            keyboardType: TextInputType.number,
-            decoration: _inputDecoration(
-              label: 'Tarifa base estimada',
-              icon: Icons.attach_money_rounded,
-            ),
-          ),
+          
         ],
       ),
     );
