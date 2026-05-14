@@ -5,6 +5,7 @@ import '../services/auth_service.dart';
 import 'chat_rooms_page.dart';
 import 'missions_page.dart';
 import 'profile_page.dart';
+import 'chatbot_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -177,6 +178,30 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF6F7FB),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: const Color(0xFF2563EB),
+
+        child: const Icon(
+          Icons.support_agent,
+          color: Colors.white,
+        ),
+
+        onPressed: () {
+
+          showModalBottomSheet(
+            context: context,
+
+            isScrollControlled: true,
+
+            backgroundColor: Colors.transparent,
+
+            builder: (_) {
+              return const ChatbotPage();
+            },
+          );
+        },
+      ),
+
       body: SafeArea(
         child: isLoading
             ? const Center(child: CircularProgressIndicator())
