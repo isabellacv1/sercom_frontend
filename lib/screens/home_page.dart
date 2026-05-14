@@ -178,30 +178,41 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF6F7FB),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFF2563EB),
 
-        child: const Icon(
-          Icons.support_agent,
-          color: Colors.white,
+      floatingActionButtonLocation:
+          FloatingActionButtonLocation.endFloat,
+
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(
+          bottom: 70,
         ),
 
-        onPressed: () {
+        child: FloatingActionButton(
+          backgroundColor:
+              const Color(0xFF2563EB),
 
-          showModalBottomSheet(
-            context: context,
+          child: const Icon(
+            Icons.support_agent,
+            color: Colors.white,
+          ),
 
-            isScrollControlled: true,
+          onPressed: () {
 
-            backgroundColor: Colors.transparent,
+            showModalBottomSheet(
+              context: context,
 
-            builder: (_) {
-              return const ChatbotPage();
-            },
-          );
-        },
+              isScrollControlled: true,
+
+              backgroundColor:
+                  Colors.transparent,
+
+              builder: (_) {
+                return const ChatbotPage();
+              },
+            );
+          },
+        ),
       ),
-
       body: SafeArea(
         child: isLoading
             ? const Center(child: CircularProgressIndicator())
