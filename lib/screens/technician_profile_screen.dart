@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../core/display_formatters.dart';
 import '../models/technician.dart';
 import 'match_confirmation_screen.dart';
+import 'worker_certifications_section.dart';
 
 class TechnicianProfileScreen extends StatelessWidget {
   final Technician technician;
@@ -83,6 +84,8 @@ class TechnicianProfileScreen extends StatelessWidget {
                     const SizedBox(height: 16),
                     _buildPortfolioGrid(),
                     const SizedBox(height: 40),
+                    WorkerCertificationsSection(workerId: technician.id),
+                    const SizedBox(height: 40), 
                   ],
                 ),
               ),
