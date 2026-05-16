@@ -7,6 +7,7 @@ import '../services/proposal_service.dart';
 import 'chat_rooms_page.dart';
 import 'match_confirmation_screen.dart';
 import 'technician_profile_screen.dart';
+import 'worker_certifications_section.dart';
 
 class CandidateListScreen extends StatefulWidget {
   final String serviceId;
@@ -486,6 +487,8 @@ class TechnicianCard extends StatelessWidget {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 8),
+                    CertificationBadge(workerId: technician.id),
                   ],
                 ),
               ),
