@@ -5,6 +5,7 @@ import '../services/auth_service.dart';
 import '../services/mission_service.dart';
 
 import 'home_page.dart';
+import 'worker_certifications_list_screen.dart';
 import 'worker_main_layout.dart';
 import 'worker_onboarding_page.dart';
 
@@ -349,6 +350,21 @@ class _ProfilePageState extends State<ProfilePage> {
                                       Navigator.pushNamed(
                                         context,
                                         '/worker-profile',
+                                      );
+                                    },
+                                  ),
+                                  const Divider(height: 1, indent: 60),
+                                  _buildAccountOption(
+                                    Icons.workspace_premium_rounded,
+                                    'Mis Certificaciones',
+                                    isWorker,
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              const WorkerCertificationsListScreen(),
+                                        ),
                                       );
                                     },
                                   ),

@@ -6,12 +6,14 @@ class CertificationInfo {
   final String name;
   final String category;
   final String? difficulty;
+  final String? description; // ← NUEVO: descripción corta para la vista cliente
 
   CertificationInfo({
     required this.id,
     required this.name,
     required this.category,
     this.difficulty,
+    this.description,
   });
 
   factory CertificationInfo.fromJson(Map<String, dynamic> json) =>
@@ -20,6 +22,7 @@ class CertificationInfo {
         name: json['name'] as String,
         category: json['category'] as String,
         difficulty: json['difficulty'] as String?,
+        description: json['description'] as String?,
       );
 }
 
@@ -67,8 +70,6 @@ class WorkerCompletedCertsResponse {
         hasCertifications: json['has_certifications'] as bool,
       );
 }
-
-// ── Modelos de progreso ────────────────────────────────────────────────────
 
 class ModuleWithProgress {
   final String id;
@@ -125,7 +126,6 @@ class EnrollmentInfo {
       );
 }
 
-/// Respuesta de GET /certifications/:id/me/progress
 class CertProgressResponse {
   final EnrollmentInfo enrollment;
   final CertificationInfo certification;
@@ -155,12 +155,10 @@ class CertProgressResponse {
       );
 }
 
-// ─── Service ──────────────────────────────────────────────────────────────
-
 class CertificationService {
   final Dio _api = ApiClient().dio;
 
-  /// HU Cliente: certificaciones completadas de un trabajador (público)
+  /// Vista pública: certificaciones completadas de un trabajador (para clientes)
   Future<WorkerCompletedCertsResponse> getWorkerCompletedCertifications(
     String workerId,
   ) async {
@@ -176,7 +174,6 @@ class CertificationService {
     }
   }
 
-  /// HU Trabajador: progreso en una certificación específica
   Future<CertProgressResponse> getMyProgress(String certificationId) async {
     try {
       final response = await _api.get(
@@ -190,7 +187,18 @@ class CertificationService {
     }
   }
 
-  /// HU Trabajador: marcar un módulo como completado
+  Future<List<CertProgressResponse>> getMyEnrollments() async {
+    try {
+      final response = await _api.get('/certifications/me/enrollments');
+      final list = response.data as List;
+      return list
+          .map((e) => CertProgressResponse.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      throw Exception(_readError(e, 'No se pudieron cargar las inscripciones'));
+    }
+  }
+
   Future<CertProgressResponse> completeModule(
     String certificationId,
     String moduleId,
@@ -223,6 +231,6 @@ class CertificationService {
       }
     }
     final text = error.toString().replaceAll('Exception: ', '').trim();
-    return text.isNotEmpty ? text : frallback;
+    return text.isNotEmpty ? text : fallback;
   }
 }

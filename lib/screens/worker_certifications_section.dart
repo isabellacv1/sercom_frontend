@@ -183,6 +183,21 @@ class _WorkerCertificationsSectionState
                     ],
                   ],
                 ),
+                if (item.certification.description != null &&
+                    item.certification.description!.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    item.certification.description!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.montserrat(
+                      fontSize: 12,
+                      color: _kTextMid,
+                      height: 1.4,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -252,7 +267,7 @@ class _WorkerCertificationsSectionState
         ...List.generate(
           2,
           (_) => Container(
-            height: 80,
+            height: 100,
             margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(
               color: const Color(0xFFE2E8F0),
