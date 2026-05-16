@@ -1,20 +1,39 @@
 import 'package:flutter/material.dart';
+import '../services/chatbot_service.dart';
+import '../services/category_service.dart';
+import '../models/category_model.dart';
+import '../models/service_option_model.dart';
 
 class ChatbotPage extends StatefulWidget {
-  const ChatbotPage({super.key});
+
+  final List<Map<String, dynamic>> messages;
+
+  final Function(
+    List<Map<String, dynamic>>
+  ) onMessagesChanged;
+
+  const ChatbotPage({
+    super.key,
+    required this.messages,
+    required this.onMessagesChanged,
+  });
 
   @override
   State<ChatbotPage> createState() =>
       _ChatbotPageState();
 }
-
 class _ChatbotPageState
     extends State<ChatbotPage> {
+
+  final ChatbotService _chatbotService =
+      ChatbotService();
 
   final TextEditingController controller =
       TextEditingController();
 
-  final List<Map<String, dynamic>> messages = [];
+  final CategoryService _categoryService =
+    CategoryService();
+
 
   bool loading = false;
 
@@ -27,30 +46,138 @@ class _ChatbotPageState
     final message = controller.text.trim();
 
     setState(() {
-      messages.add({
+
+      widget.messages.add({
         'text': message,
         'isUser': true,
       });
-
+      
       loading = true;
     });
 
-    controller.clear();
-
-    // TEMPORAL MOCK
-    await Future.delayed(
-      const Duration(seconds: 1),
+    widget.onMessagesChanged(
+      widget.messages,
     );
 
-    setState(() {
-      messages.add({
-        'text':
-            'Describe más detalles sobre el problema.',
-        'isUser': false,
-      });
+    controller.clear();
 
-      loading = false;
-    });
+    final response =
+        await _chatbotService.sendMessage(
+      widget.messages,
+    );
+
+  CategoryModel? detectedCategory;
+  ServiceOptionModel? detectedService;
+
+  final draft = response.missionDraft;
+
+  if (draft != null) {
+
+    final categories =
+        await _categoryService.getCategories();
+
+    try {
+
+      detectedCategory = categories.firstWhere(
+        (c) =>
+            c.name.toLowerCase() ==
+            draft['category']
+                .toString()
+                .toLowerCase(),
+      );
+
+      final services =
+          await _categoryService
+              .getServicesByCategory(
+        detectedCategory.id,
+      );
+
+      detectedService = services.firstWhere(
+        (s) =>
+            s.title.toLowerCase() ==
+            draft['serviceType']
+                .toString()
+                .toLowerCase(),
+      );
+
+    } catch (_) {}
+  }
+      
+      setState(() {
+
+        widget.messages.add({
+          'text': response.reply,
+          'isUser': false,
+        });
+
+        loading = false;
+      });
+      widget.onMessagesChanged(
+        widget.messages,
+      );
+
+      if (response.readyToCreate &&
+          response.missionDraft != null) {
+
+        showModalBottomSheet(
+
+          context: context,
+
+          builder: (_) {
+
+            return Container(
+
+              padding: const EdgeInsets.all(20),
+
+              child: Column(
+
+                mainAxisSize: MainAxisSize.min,
+
+                children: [
+
+                  const Text(
+                    '¿Deseas crear esta solicitud?',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  ElevatedButton(
+
+                    onPressed: () {
+
+                      Navigator.pop(context);
+
+                      Navigator.pushNamed(
+
+                        context,
+
+                        '/create-mission',
+
+                        arguments: {
+
+                        ...response.missionDraft!,
+
+                        'category': detectedCategory,
+
+                        'serviceOption': detectedService,
+                      },
+                      );
+                    },
+
+                    child: const Text(
+                      'Crear servicio',
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      }
   }
 
   @override
@@ -124,12 +251,12 @@ class _ChatbotPageState
                 horizontal: 16,
               ),
 
-              itemCount: messages.length,
+              itemCount: widget.messages.length,
 
               itemBuilder: (_, index) {
 
                 final message =
-                    messages[index];
+                    widget.messages[index];
 
                 final isUser =
                     message['isUser'];

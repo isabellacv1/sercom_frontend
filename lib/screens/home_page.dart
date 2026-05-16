@@ -23,6 +23,7 @@ class _HomePageState extends State<HomePage> {
   List<CategoryModel> categories = [];
   List<CategoryModel> filteredCategories = [];
   String userName = 'Usuario';
+  List<Map<String, dynamic>> chatbotMessages = [];
 
   int _currentIndex = 0;
   final PageController _pageController = PageController();
@@ -188,13 +189,15 @@ class _HomePageState extends State<HomePage> {
         ),
 
         child: FloatingActionButton(
-          backgroundColor:
-              const Color(0xFF2563EB),
+            mini: true,
 
-          child: const Icon(
-            Icons.support_agent,
-            color: Colors.white,
-          ),
+            backgroundColor:
+                const Color(0xFF2563EB),
+
+            child: const Icon(
+              Icons.support_agent,
+              color: Colors.white,
+            ),
 
           onPressed: () {
 
@@ -207,7 +210,15 @@ class _HomePageState extends State<HomePage> {
                   Colors.transparent,
 
               builder: (_) {
-                return const ChatbotPage();
+                return ChatbotPage(
+                  messages: chatbotMessages,
+
+                  onMessagesChanged: (newMessages) {
+                    setState(() {
+                      chatbotMessages = newMessages;
+                    });
+                  },
+                );
               },
             );
           },

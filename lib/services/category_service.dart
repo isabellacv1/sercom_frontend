@@ -41,7 +41,9 @@ class CategoryService {
       String categoryId) async {
     try {
       final response =
-          await api.get('/service-categories/$categoryId/services');
+          await api.get(
+          '/service-options/category/$categoryId',
+        );
 
       print('SERVICES STATUS: ${response.statusCode}');
       print('SERVICES DATA: ${response.data}');

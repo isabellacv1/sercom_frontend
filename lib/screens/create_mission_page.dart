@@ -28,23 +28,51 @@ class _CreateMissionPageState extends State<CreateMissionPage> {
 
   CategoryModel? category;
   ServiceOptionModel? serviceOption;
+  Map<String, dynamic>? missionDraft;
 
   @override
   void didChangeDependencies() {
+
     super.didChangeDependencies();
 
-    final args = ModalRoute.of(context)?.settings.arguments;
+    final args =
+        ModalRoute.of(context)
+            ?.settings
+            .arguments;
 
     if (args is Map<String, dynamic>) {
-      final rawCategory = args['category'];
-      final rawServiceOption = args['serviceOption'];
+
+      missionDraft = args;
+
+      final rawCategory =
+          args['category'];
+
+      final rawServiceOption =
+          args['serviceOption'];
 
       if (rawCategory is CategoryModel) {
         category = rawCategory;
       }
 
-      if (rawServiceOption is ServiceOptionModel) {
-        serviceOption = rawServiceOption;
+      if (rawServiceOption
+          is ServiceOptionModel) {
+
+        serviceOption =
+            rawServiceOption;
+      }
+
+      descriptionController.text =
+          args['description'] ?? '';
+
+      addressController.text =
+          args['location'] ?? '';
+
+      // presupuesto opcional
+
+      if (args['urgent'] == true) {
+
+        minBudget = 80000;
+        maxBudget = 200000;
       }
     }
   }
@@ -274,6 +302,39 @@ class _CreateMissionPageState extends State<CreateMissionPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (missionDraft != null)
+        Container(
+          margin: const EdgeInsets.only(
+            bottom: 18,
+          ),
+
+          padding: const EdgeInsets.all(14),
+
+          decoration: BoxDecoration(
+            color: const Color(0xFFEFF6FF),
+
+            borderRadius:
+                BorderRadius.circular(16),
+          ),
+
+          child: const Row(
+            children: [
+
+              Icon(
+                Icons.auto_awesome,
+                color: Color(0xFF2563EB),
+              ),
+
+              SizedBox(width: 10),
+
+              Expanded(
+                child: Text(
+                  'Solicitud generada automáticamente por el asistente virtual.',
+                ),
+              ),
+            ],
+          ),
+        ),
         Text(
           category != null
               ? '¿Qué necesitas en ${category!.name}?'
