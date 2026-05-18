@@ -4,6 +4,7 @@ import '../services/certification_service.dart';
 class CertificationDetailScreen extends StatefulWidget {
   final String certificationId;
 
+
   const CertificationDetailScreen({
     super.key,
     required this.certificationId,
@@ -23,10 +24,15 @@ class _CertificationDetailScreenState
 
   bool isLoading = true;
 
+  bool isEnrolling = false;
+
+  bool isEnrolled = false;
+
   @override
   void initState() {
     super.initState();
     loadCertification();
+    checkEnrollment();
   }
 
   Future<void> loadCertification() async {
@@ -61,6 +67,92 @@ class _CertificationDetailScreenState
       }
     }
   }
+
+  Future<void> checkEnrollment() async {
+  try {
+    final enrollments =
+        await _service.getMyEnrollments();
+
+    final exists = enrollments.any(
+      (e) =>
+          e.certification.id ==
+          widget.certificationId,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      isEnrolled = exists;
+    });
+  } catch (_) {}
+}
+
+  Future<void> enroll() async {
+  if (isEnrolling || isEnrolled) return;
+
+  try {
+    setState(() {
+      isEnrolling = true;
+    });
+
+    await _service.enrollCertification(
+      widget.certificationId,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      isEnrolled = true;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Inscripción realizada correctamente',
+        ),
+      ),
+    );
+  } catch (e) {
+  if (!mounted) return;
+
+  final message = e.toString();
+
+  final alreadyEnrolled =
+      message.toLowerCase().contains(
+        'ya estás inscrito',
+      );
+
+  if (alreadyEnrolled) {
+    setState(() {
+      isEnrolled = true;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Ya estás inscrito en esta certificación',
+        ),
+      ),
+    );
+
+    return;
+  }
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(
+        'Error: $message',
+      ),
+    ),
+  );
+} finally {
+    if (mounted) {
+      setState(() {
+        isEnrolling = false;
+      });
+    }
+  }
+}
 
   String difficultyLabel(String? difficulty) {
     switch (difficulty) {
@@ -546,11 +638,16 @@ class _CertificationDetailScreenState
                           width: double.infinity,
                           height: 64,
                           child: ElevatedButton(
-                            onPressed: () {},
+                            onPressed:
+                              isEnrolled || isEnrolling
+                                  ? null
+                                  : enroll,
                             style:
                                 ElevatedButton.styleFrom(
                               backgroundColor:
-                                  primaryColor,
+                                  isEnrolled
+                                  ? Colors.grey
+                                  : primaryColor,
                               elevation: 0,
                               shape:
                                   RoundedRectangleBorder(
@@ -560,33 +657,40 @@ class _CertificationDetailScreenState
                                 ),
                               ),
                             ),
-                            child: const Row(
+                            child: Row(
                               mainAxisAlignment:
-                                  MainAxisAlignment
-                                      .center,
+                                  MainAxisAlignment.center,
                               children: [
-                                Text(
-                                  'Comenzar certificación',
-                                  style:
-                                      TextStyle(
-                                    color: Colors
-                                        .white,
-                                    fontSize:
-                                        17,
-                                    fontWeight:
-                                        FontWeight
-                                            .w700,
+                                if (isEnrolling)
+                                  const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child:
+                                        CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                else ...[
+                                  Text(
+                                    isEnrolled
+                                        ? 'Ya inscrito'
+                                        : 'Comenzar certificación',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
-                                ),
-                                SizedBox(
-                                  width: 10,
-                                ),
-                                Icon(
-                                  Icons
-                                      .rocket_launch_rounded,
-                                  color: Colors
-                                      .white,
-                                ),
+                                  const SizedBox(width: 10),
+                                  Icon(
+                                    isEnrolled
+                                        ? Icons.check_circle_rounded
+                                        : Icons
+                                            .rocket_launch_rounded,
+                                    color: Colors.white,
+                                  ),
+                                ],
                               ],
                             ),
                           ),

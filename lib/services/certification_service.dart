@@ -290,6 +290,23 @@ Future<CertificationDetail> getCertificationDetail(
   }
 }
 
+Future<void> enrollCertification(
+  String certificationId,
+) async {
+  try {
+    await _api.post(
+      '/certifications/$certificationId/enroll',
+    );
+  } catch (e) {
+    throw Exception(
+      _readError(
+        e,
+        'Error al inscribirse',
+      ),
+    );
+  }
+}
+
 }
 
 
