@@ -6,7 +6,8 @@ class CertificationInfo {
   final String name;
   final String category;
   final String? difficulty;
-  final String? description; // ← NUEVO: descripción corta para la vista cliente
+  final String? description;
+  final int? durationHours;
 
   CertificationInfo({
     required this.id,
@@ -14,6 +15,7 @@ class CertificationInfo {
     required this.category,
     this.difficulty,
     this.description,
+    this.durationHours,
   });
 
   factory CertificationInfo.fromJson(Map<String, dynamic> json) =>
@@ -23,6 +25,7 @@ class CertificationInfo {
         category: json['category'] as String,
         difficulty: json['difficulty'] as String?,
         description: json['description'] as String?,
+        durationHours: json['duration_hours'] as int?,
       );
 }
 
@@ -233,4 +236,124 @@ class CertificationService {
     final text = error.toString().replaceAll('Exception: ', '').trim();
     return text.isNotEmpty ? text : fallback;
   }
+
+  Future<List<CertificationInfo>> getCertifications({
+  String? category,
+}) async {
+  try {
+    final response = await _api.get(
+      '/certifications',
+      queryParameters: {
+        if (category != null) 'category': category,
+      },
+    );
+
+    final data = response.data as Map<String, dynamic>;
+
+    final list = data['certifications'] as List;
+
+    return list
+        .map(
+          (e) => CertificationInfo.fromJson(
+            e as Map<String, dynamic>,
+          ),
+        )
+        .toList();
+  } catch (e) {
+    throw Exception(
+      _readError(
+        e,
+        'No se pudieron cargar las certificaciones',
+      ),
+    );
+  }
 }
+
+Future<CertificationDetail> getCertificationDetail(
+  String certificationId,
+) async {
+  try {
+    final response = await _api.get(
+      '/certifications/$certificationId',
+    );
+
+    return CertificationDetail.fromJson(
+      response.data as Map<String, dynamic>,
+    );
+  } catch (e) {
+    throw Exception(
+      _readError(
+        e,
+        'No se pudo cargar la certificación',
+      ),
+    );
+  }
+}
+
+}
+
+
+class CertificationModuleInfo {
+  final String id;
+  final String title;
+  final String? description;
+  final int orderIndex;
+
+  CertificationModuleInfo({
+    required this.id,
+    required this.title,
+    this.description,
+    required this.orderIndex,
+  });
+
+  factory CertificationModuleInfo.fromJson(
+    Map<String, dynamic> json,
+  ) =>
+      CertificationModuleInfo(
+        id: json['id'] as String,
+        title: json['title'] as String,
+        description: json['description'] as String?,
+        orderIndex: json['order_index'] as int,
+      );
+}
+
+class CertificationDetail {
+  final String id;
+  final String name;
+  final String? description;
+  final String category;
+  final String? difficulty;
+  final int? durationHours;
+
+  final List<CertificationModuleInfo> modules;
+
+  CertificationDetail({
+    required this.id,
+    required this.name,
+    this.description,
+    required this.category,
+    this.difficulty,
+    this.durationHours,
+    required this.modules,
+  });
+
+  factory CertificationDetail.fromJson(
+    Map<String, dynamic> json,
+  ) =>
+      CertificationDetail(
+        id: json['id'] as String,
+        name: json['name'] as String,
+        description: json['description'] as String?,
+        category: json['category'] as String,
+        difficulty: json['difficulty'] as String?,
+        durationHours: json['duration_hours'] as int?,
+        modules: (json['certification_modules'] as List)
+            .map(
+              (e) => CertificationModuleInfo.fromJson(
+                e as Map<String, dynamic>,
+              ),
+            )
+            .toList(),
+      );
+}
+
